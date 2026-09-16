@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/middleware"
+	"github.com/callmhejerry/sms/internal/tenant"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,7 +16,11 @@ type Server struct {
 	logger     *slog.Logger
 }
 
-func New(port string, pool *pgxpool.Pool, logger *slog.Logger) *Server {
+type Handlers struct {
+	TenantHandler *tenant.Handler
+}
+
+func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers) *Server {
 	mux := http.NewServeMux()
 
 	healthHanler := NewHealthHandler(pool)
@@ -23,8 +28,13 @@ func New(port string, pool *pgxpool.Pool, logger *slog.Logger) *Server {
 	mux.HandleFunc("GET /healthz", healthHanler.Healthz)
 	mux.HandleFunc("GET /readyz", healthHanler.Readyz)
 
-	var handler http.Handler = mux
+	// TENANT ROUTE
+	mux.HandleFunc("POST /api/v1/tenants", handlers.TenantHandler.CreateTenant)
+	mux.HandleFunc("GET /api/v1/tenants", handlers.TenantHandler.ListTenants)
+	mux.HandleFunc("GET /api/v1/tenants/{id}", handlers.TenantHandler.GetTenant)
 
+	// MIDDLEWARE CHAIN
+	var handler http.Handler = mux
 	handler = middleware.RequestID(handler)
 	handler = middleware.Recovery(logger)(handler)
 

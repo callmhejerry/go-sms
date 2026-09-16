@@ -14,6 +14,8 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/logger"
 	"github.com/callmhejerry/sms/internal/shared/server"
+	"github.com/callmhejerry/sms/internal/shared/store"
+	"github.com/callmhejerry/sms/internal/tenant"
 	"github.com/joho/godotenv"
 )
 
@@ -42,7 +44,19 @@ func main() {
 	log.Info("Connected to the database successfully")
 	fmt.Println("Database connection OK")
 
-	server := server.New(cfg.AppPort, pool, log)
+	queries := store.New(pool)
+
+	// Services
+	tenantService := tenant.NewService(queries)
+
+	// Handlers
+	tenantHandler := tenant.NewHandler(tenantService)
+
+	handlers := server.Handlers{
+		TenantHandler: tenantHandler,
+	}
+
+	server := server.New(cfg.AppPort, pool, log, handlers)
 	//graceful shutdown
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {
