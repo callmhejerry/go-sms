@@ -1,0 +1,2 @@
+-- Empty initial migration
+-- We will add real tables in later phases
