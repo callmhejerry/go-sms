@@ -1,0 +1,1 @@
+sessions, classes, subjects, students, admission
