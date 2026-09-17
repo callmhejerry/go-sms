@@ -50,7 +50,7 @@ func main() {
 	tenantService := tenant.NewService(queries)
 
 	// Handlers
-	tenantHandler := tenant.NewHandler(tenantService)
+	tenantHandler := tenant.NewHandler(tenantService, log)
 
 	handlers := server.Handlers{
 		TenantHandler: tenantHandler,
