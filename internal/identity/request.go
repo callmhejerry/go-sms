@@ -15,3 +15,8 @@ type LoginRequest struct {
 	Email      string `json:"email"`
 	Password   string `json:"password"`
 }
+
+type CreateRoleRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

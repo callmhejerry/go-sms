@@ -159,3 +159,57 @@ func (service *Service) Login(ctx context.Context, request LoginRequest) (*Login
 		User:  ConvertToUserResponse(&user),
 	}, nil
 }
+
+func (service *Service) CreateRole(ctx context.Context, tenantId uuid.UUID, input CreateRoleRequest) (*store.Role, error) {
+	name := strings.TrimSpace(strings.ToLower(input.Name))
+	if name == "" {
+		return nil, apierror.Validation("name is required")
+	}
+	role, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
+		TenantID: pgtype.UUID{
+			Bytes: tenantId,
+			Valid: true,
+		},
+		Name:        name,
+		Description: &input.Description,
+	})
+
+	if err != nil {
+		return nil, apierror.Internal(err, "failed to create role")
+	}
+	return &role, nil
+}
+
+func (service *Service) AssignRole(ctx context.Context, userId, roleId uuid.UUID) error {
+	err := service.queries.AssignRoleToUser(ctx, store.AssignRoleToUserParams{
+		UserID: pgtype.UUID{Bytes: userId},
+		RoleID: pgtype.UUID{Bytes: roleId},
+	})
+	if err != nil {
+		return apierror.Internal(err, "failed to create role")
+	}
+	return nil
+}
+
+func (service *Service) GetUserRoles(ctx context.Context, userId uuid.UUID) ([]store.Role, error) {
+
+	roles, err := service.queries.GetUserRoles(ctx, pgtype.UUID{
+		Bytes: userId,
+	})
+
+	if err != nil {
+		return nil, apierror.Internal(err, "failed to get user roles")
+	}
+	return roles, nil
+}
+
+func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleName string) (bool, error) {
+	hasRole, err := service.queries.UserHasRole(ctx, store.UserHasRoleParams{
+		UserID: pgtype.UUID{Bytes: userId},
+		Name:   roleName,
+	})
+	if err != nil {
+		return false, apierror.Internal(err, "failed to check role")
+	}
+	return hasRole, nil
+}
