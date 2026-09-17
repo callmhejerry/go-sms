@@ -14,7 +14,7 @@ CREATE INDEX idx_roles_tenant_id  ON roles(tenant_id);
 
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
     assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     PRIMARY KEY (user_id, role_id)

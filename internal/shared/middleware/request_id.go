@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -21,7 +20,6 @@ func RequestID(next http.Handler) http.Handler {
 
 		w.Header().Set("X-Request-ID", requestId)
 
-		fmt.Printf("Setting request id  to be %v\n", requestId)
 		ctx := context.WithValue(r.Context(), RequestIDKey, requestId)
 
 		next.ServeHTTP(w, r.WithContext(ctx))

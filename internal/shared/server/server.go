@@ -23,7 +23,7 @@ type Handlers struct {
 	Identity *identity.Handler
 }
 
-func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers, jwtManger *auth.JWTManager) *Server {
+func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers, jwtManger *auth.JWTManager, roleChecker middleware.RoleChecker) *Server {
 	mux := http.NewServeMux()
 
 	// --------------------------
@@ -44,7 +44,10 @@ func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers
 	protectedMux.HandleFunc("GET /api/v1/tenants/{id}", handlers.Tenant.GetTenant)
 
 	// IDENTITY ROUTE
-	protectedMux.HandleFunc("POST /api/v1/users", handlers.Identity.CreateUser)
+
+	adminOnly := middleware.RequireRole(roleChecker, "admin")
+
+	protectedMux.Handle("POST /api/v1/users", adminOnly(http.HandlerFunc(handlers.Identity.CreateUser)))
 	protectedMux.HandleFunc("GET /api/v1/tenants/{tenant_id}/users/{id}", handlers.Identity.GetUser)
 
 	// MIDDLEWARE CHAIN

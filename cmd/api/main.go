@@ -50,7 +50,7 @@ func main() {
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationHours)
 
 	// Services
-	tenantService := tenant.NewService(queries)
+	tenantService := tenant.NewService(queries, log)
 	identityService := identity.NewService(queries, jwtManager)
 
 	// Handlers
@@ -62,7 +62,7 @@ func main() {
 		Identity: identityHandler,
 	}
 
-	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager)
+	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)
 	//graceful shutdown
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {

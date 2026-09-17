@@ -22,7 +22,7 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 }
 
 func (handler *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {
-	var input CreateTenantInput
+	var input CreateTenantRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		apierror.WriteError(w, apierror.Validation("invalid request body"), handler.logger)
@@ -38,8 +38,12 @@ func (handler *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
-	json.NewEncoder(w).Encode(tenant)
+	json.NewEncoder(w).Encode(CreateTenantResponse{
+		TenantID:  tenant.ID.String(),
+		Name:      tenant.Name,
+		Slug:      tenant.Slug,
+		CreatedAt: tenant.CreatedAt.Time,
+	})
 }
 
 func (handler *Handler) ListTenants(w http.ResponseWriter, r *http.Request) {
