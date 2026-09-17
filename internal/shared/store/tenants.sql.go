@@ -37,53 +37,65 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Ten
 }
 
 const getTenantById = `-- name: GetTenantById :one
-SELECT FROM tenants
+SELECT id, name, slug, status, created_at, updated_at FROM tenants
 WHERE id = $1
 `
 
-type GetTenantByIdRow struct {
-}
-
-func (q *Queries) GetTenantById(ctx context.Context, id pgtype.UUID) (GetTenantByIdRow, error) {
+func (q *Queries) GetTenantById(ctx context.Context, id pgtype.UUID) (Tenant, error) {
 	row := q.db.QueryRow(ctx, getTenantById, id)
-	var i GetTenantByIdRow
-	err := row.Scan()
+	var i Tenant
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
 const getTenantBySlug = `-- name: GetTenantBySlug :one
-SELECT FROM tenants
+SELECT id, name, slug, status, created_at, updated_at FROM tenants
 WHERE slug = $1
 `
 
-type GetTenantBySlugRow struct {
-}
-
-func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (GetTenantBySlugRow, error) {
+func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (Tenant, error) {
 	row := q.db.QueryRow(ctx, getTenantBySlug, slug)
-	var i GetTenantBySlugRow
-	err := row.Scan()
+	var i Tenant
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
 const listTenants = `-- name: ListTenants :many
-SELECT FROM tenants
+SELECT id, name, slug, status, created_at, updated_at FROM tenants
 ORDER BY created_at DESC
 `
 
-type ListTenantsRow struct {
-}
-
-func (q *Queries) ListTenants(ctx context.Context) ([]ListTenantsRow, error) {
+func (q *Queries) ListTenants(ctx context.Context) ([]Tenant, error) {
 	rows, err := q.db.Query(ctx, listTenants)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListTenantsRow{}
+	items := []Tenant{}
 	for rows.Next() {
-		var i ListTenantsRow
-		if err := rows.Scan(); err != nil {
+		var i Tenant
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

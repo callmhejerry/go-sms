@@ -64,7 +64,7 @@ func (service *Service) GetTenantBySlug(ctx context.Context, slug string) (*stor
 }
 
 func (service *Service) ListTenants(ctx context.Context) ([]store.Tenant, error) {
-	tenants, err := service.ListTenants(ctx)
+	tenants, err := service.queries.ListTenants(ctx)
 
 	if err != nil {
 		return nil, apierror.Internal(err, "Failed to list tenants")

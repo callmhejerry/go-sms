@@ -16,18 +16,23 @@ type Config struct {
 	DBPort     string
 	DBPassword string
 	DBSSLMode  string
+
+	JWTSecret          string
+	JWTExpirationHours int
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		AppEnv:     getEnv("APP_ENV", "development"),
-		AppPort:    getEnv("APP_PORT", "8081"),
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBUser:     getEnv("DB_USER", "school"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBPassword: getEnv("DB_PASSWORD", "schoolsecret"),
-		DBName:     getEnv("DB_NAME", "school_sms"),
-		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
+		AppEnv:             getEnv("APP_ENV", "development"),
+		AppPort:            getEnv("APP_PORT", "8081"),
+		DBHost:             getEnv("DB_HOST", "localhost"),
+		DBUser:             getEnv("DB_USER", "school"),
+		DBPort:             getEnv("DB_PORT", "5432"),
+		DBPassword:         getEnv("DB_PASSWORD", "schoolsecret"),
+		DBName:             getEnv("DB_NAME", "school_sms"),
+		DBSSLMode:          getEnv("DB_SSLMODE", "disable"),
+		JWTSecret:          getEnv("JWT_SECRET", "change-me-in-production-super-secret-key"),
+		JWTExpirationHours: getEnvInt("JWT_EXPIRATION_HOURS", 72),
 	}
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("Invalid config: %w", err)

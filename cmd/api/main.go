@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/callmhejerry/sms/internal/identity"
+	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/config"
 	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/logger"
@@ -45,18 +47,22 @@ func main() {
 	fmt.Println("Database connection OK")
 
 	queries := store.New(pool)
+	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationHours)
 
 	// Services
 	tenantService := tenant.NewService(queries)
+	identityService := identity.NewService(queries, jwtManager)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log)
+	identityHandler := identity.NewHandler(identityService, log)
 
 	handlers := server.Handlers{
-		TenantHandler: tenantHandler,
+		Tenant:   tenantHandler,
+		Identity: identityHandler,
 	}
 
-	server := server.New(cfg.AppPort, pool, log, handlers)
+	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager)
 	//graceful shutdown
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {

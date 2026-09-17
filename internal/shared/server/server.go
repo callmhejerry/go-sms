@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/callmhejerry/sms/internal/identity"
+	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
 	"github.com/callmhejerry/sms/internal/tenant"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,24 +19,40 @@ type Server struct {
 }
 
 type Handlers struct {
-	TenantHandler *tenant.Handler
+	Tenant   *tenant.Handler
+	Identity *identity.Handler
 }
 
-func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers) *Server {
+func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers, jwtManger *auth.JWTManager) *Server {
 	mux := http.NewServeMux()
 
+	// --------------------------
+	// Public routes (no auth)
+	// --------------------------
 	healthHanler := NewHealthHandler(pool)
-
 	mux.HandleFunc("GET /healthz", healthHanler.Healthz)
 	mux.HandleFunc("GET /readyz", healthHanler.Readyz)
 
-	// TENANT ROUTE
-	mux.HandleFunc("POST /api/v1/tenants", handlers.TenantHandler.CreateTenant)
-	mux.HandleFunc("GET /api/v1/tenants", handlers.TenantHandler.ListTenants)
-	mux.HandleFunc("GET /api/v1/tenants/{id}", handlers.TenantHandler.GetTenant)
+	mux.HandleFunc("POST /api/v1/tenants", handlers.Tenant.CreateTenant)
+	mux.HandleFunc("POST /api/v1/login", handlers.Identity.Login)
+
+	// --------------------------
+	// Protected routes
+	// --------------------------
+	protectedMux := http.NewServeMux()
+	protectedMux.HandleFunc("GET /api/v1/tenants", handlers.Tenant.ListTenants)
+	protectedMux.HandleFunc("GET /api/v1/tenants/{id}", handlers.Tenant.GetTenant)
+
+	// IDENTITY ROUTE
+	protectedMux.HandleFunc("POST /api/v1/users", handlers.Identity.CreateUser)
+	protectedMux.HandleFunc("GET /api/v1/tenants/{tenant_id}/users/{id}", handlers.Identity.GetUser)
 
 	// MIDDLEWARE CHAIN
+	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
+	mux.Handle("/", protectedHandler)
+
 	var handler http.Handler = mux
+
 	handler = middleware.RequestID(handler)
 	handler = middleware.Recovery(logger)(handler)
 
