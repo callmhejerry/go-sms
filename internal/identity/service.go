@@ -2,7 +2,9 @@ package identity
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
@@ -27,6 +29,15 @@ func NewService(queries *store.Queries, jwtManager *auth.JWTManager) *Service {
 var (
 	InvalidCredentials = apierror.New("invalid_credentials", "Invalid email or password", http.StatusUnauthorized)
 	InactiveUser       = apierror.New("user_inactive", "Invalid email or password", http.StatusUnauthorized)
+)
+
+type RoleName string
+
+const (
+	Owner      RoleName = "owner"
+	Admin      RoleName = "admin"
+	Teacher    RoleName = "teacher"
+	Accountant RoleName = "accountant"
 )
 
 func (service *Service) CreateUser(ctx context.Context, input CreateUserRequest) (*store.User, error) {
@@ -182,8 +193,8 @@ func (service *Service) CreateRole(ctx context.Context, tenantId uuid.UUID, inpu
 
 func (service *Service) AssignRole(ctx context.Context, userId, roleId uuid.UUID) error {
 	err := service.queries.AssignRoleToUser(ctx, store.AssignRoleToUserParams{
-		UserID: pgtype.UUID{Bytes: userId},
-		RoleID: pgtype.UUID{Bytes: roleId},
+		UserID: pgtype.UUID{Bytes: userId, Valid: true},
+		RoleID: pgtype.UUID{Bytes: roleId, Valid: true},
 	})
 	if err != nil {
 		return apierror.Internal(err, "failed to create role")
@@ -195,6 +206,7 @@ func (service *Service) GetUserRoles(ctx context.Context, userId uuid.UUID) ([]s
 
 	roles, err := service.queries.GetUserRoles(ctx, pgtype.UUID{
 		Bytes: userId,
+		Valid: true,
 	})
 
 	if err != nil {
@@ -203,13 +215,20 @@ func (service *Service) GetUserRoles(ctx context.Context, userId uuid.UUID) ([]s
 	return roles, nil
 }
 
-func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleName string) (bool, error) {
-	hasRole, err := service.queries.UserHasRole(ctx, store.UserHasRoleParams{
-		UserID: pgtype.UUID{Bytes: userId},
-		Name:   roleName,
-	})
+func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleName RoleName) (bool, error) {
+
+	userRoles, err := service.queries.GetUserRoles(ctx, pgtype.UUID{Bytes: userId, Valid: true})
+
 	if err != nil {
 		return false, apierror.Internal(err, "failed to check role")
 	}
-	return hasRole, nil
+
+	fmt.Printf("User roles: %v", userRoles)
+
+	if slices.ContainsFunc(userRoles, func(role store.Role) bool {
+		return role.Name == string(Owner) || role.Name == string(roleName)
+	}) {
+		return true, nil
+	}
+	return false, nil
 }

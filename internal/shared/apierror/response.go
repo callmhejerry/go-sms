@@ -21,9 +21,6 @@ func WriteError(w http.ResponseWriter, err error, logger *slog.Logger) {
 	var appError *AppError
 
 	if errors.As(err, &appError) {
-		if logger != nil {
-			logger.Error(appError.Message, slog.String("error", appError.Err.Error()))
-		}
 		writeJSON(w, appError.HTTPStatus, errorResponse{
 			Error: errorBody{
 				Code:    appError.Code,

@@ -50,7 +50,7 @@ func main() {
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationHours)
 
 	// Services
-	tenantService := tenant.NewService(queries, log)
+	tenantService := tenant.NewService(pool, queries)
 	identityService := identity.NewService(queries, jwtManager)
 
 	// Handlers

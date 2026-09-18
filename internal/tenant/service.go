@@ -2,25 +2,27 @@ package tenant
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 
+	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/auth"
+	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
 	queries *store.Queries
-	logger  *slog.Logger
+	pool    *pgxpool.Pool
 }
 
-func NewService(queries *store.Queries, logger *slog.Logger) *Service {
+func NewService(pool *pgxpool.Pool, queries *store.Queries) *Service {
 	return &Service{
+		pool:    pool,
 		queries: queries,
-		logger:  logger,
 	}
 }
 
@@ -54,76 +56,84 @@ func (service *Service) CreateTenant(ctx context.Context, input CreateTenantRequ
 		return nil, apierror.Validation("password must be atleast 8 characters")
 	}
 
-	//1.  CREATE TENANT
-	newTenant, err := service.queries.CreateTenant(ctx, store.CreateTenantParams{
-		Name: name,
-		Slug: slug,
-	})
+	var newTenant store.Tenant
+	err := database.WithTx(ctx, service.pool, func(q *store.Queries) error {
+		//1.  CREATE TENANT
+		t, err := service.queries.CreateTenant(ctx, store.CreateTenantParams{
+			Name: name,
+			Slug: slug,
+		})
 
-	if err != nil {
-		return nil, apierror.Internal(err, "Failed to create account")
-	}
+		if err != nil {
+			return database.TranslateError(err)
+			// return nil, apierror.Internal(err, "Failed to create account")
+		}
+		newTenant = t
 
-	//2. CREATE USER
-	hash, err := auth.HashPassword(input.Owner.Password)
-	if err != nil {
-		return nil, apierror.Internal(err, "failed to hash password")
-	}
+		//2. CREATE USER
+		hash, err := auth.HashPassword(input.Owner.Password)
+		if err != nil {
+			return apierror.Internal(err, "failed to hash password")
+		}
 
-	newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
-		TenantID:     newTenant.ID,
-		Email:        email,
-		FirstName:    firstName,
-		LastName:     lastName,
-		PasswordHash: hash,
-	})
-	if err != nil {
-		return nil, apierror.Internal(err, "failed to create user")
-	}
-
-	//3. CREATE OWNER ROLE
-	ownerDescription := "Full access to everything within the school"
-	ownerRole, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
-		TenantID:    newTenant.ID,
-		Name:        "owner",
-		Description: &ownerDescription,
-	})
-
-	if err != nil {
-		return nil, apierror.Internal(err, "failed to create owner role")
-	}
-
-	//4. Assign owner role
-	err = service.queries.AssignRoleToUser(ctx, store.AssignRoleToUserParams{
-		UserID: newUser.ID,
-		RoleID: ownerRole.ID,
-	})
-	if err != nil {
-		return nil, apierror.Internal(err, "failed to assign owner role")
-	}
-
-	defaultRoles := []struct {
-		Name        string
-		Description string
-	}{
-		{Name: "admin", Description: "Administrative access"},
-		{Name: "teacher", Description: "Can manage classes, subject and grades"},
-		{Name: "accountant", Description: "Can manage fees and payments"},
-	}
-
-	for _, r := range defaultRoles {
-		_, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
-			TenantID:    newTenant.ID,
-			Name:        r.Name,
-			Description: &r.Description,
+		newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
+			TenantID:     newTenant.ID,
+			Email:        email,
+			FirstName:    firstName,
+			LastName:     lastName,
+			PasswordHash: hash,
 		})
 		if err != nil {
-			if service.logger != nil {
-				service.logger.Error("Failed to create default roles")
-			}
-			continue
+			return database.TranslateError(err)
 		}
+
+		//3. CREATE OWNER ROLE
+		ownerDescription := "Full access to everything within the school"
+		ownerRole, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
+			TenantID:    newTenant.ID,
+			Name:        string(identity.Owner),
+			Description: &ownerDescription,
+		})
+
+		if err != nil {
+			return database.TranslateError(err)
+		}
+
+		//4. Assign owner role
+		err = service.queries.AssignRoleToUser(ctx, store.AssignRoleToUserParams{
+			UserID: newUser.ID,
+			RoleID: ownerRole.ID,
+		})
+		if err != nil {
+			return database.TranslateError(err)
+		}
+
+		defaultRoles := []struct {
+			Name        string
+			Description string
+		}{
+			{Name: string(identity.Admin), Description: "Administrative access"},
+			{Name: string(identity.Teacher), Description: "Can manage classes, subject and grades"},
+			{Name: string(identity.Accountant), Description: "Can manage fees and payments"},
+		}
+
+		for _, r := range defaultRoles {
+			_, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
+				TenantID:    newTenant.ID,
+				Name:        r.Name,
+				Description: &r.Description,
+			})
+			if err != nil {
+				return database.TranslateError(err)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
+
 	return &newTenant, nil
 }
 
