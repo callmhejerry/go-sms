@@ -8,6 +8,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AcademicSession struct {
+	ID        pgtype.UUID        `json:"id"`
+	TenantID  pgtype.UUID        `json:"tenant_id"`
+	Name      string             `json:"name"`
+	StartDate pgtype.Date        `json:"start_date"`
+	EndDate   pgtype.Date        `json:"end_date"`
+	IsCurrent bool               `json:"is_current"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID          pgtype.UUID        `json:"id"`
 	TenantID    pgtype.UUID        `json:"tenant_id"`
