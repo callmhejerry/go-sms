@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/apierror"
+	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/google/uuid"
 )
 
 type RoleChecker interface {
-	UserHasRole(ctx context.Context, userId uuid.UUID, roleName identity.RoleName) (bool, error)
+	UserHasRole(ctx context.Context, userId uuid.UUID, roleName constants.RoleName) (bool, error)
 }
 
-func RequireRole(checker RoleChecker, roleName identity.RoleName) func(http.Handler) http.Handler {
+func RequireRole(checker RoleChecker, roleName constants.RoleName) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims := GetClaims(r.Context())

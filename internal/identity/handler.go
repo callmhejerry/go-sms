@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
+	"github.com/callmhejerry/sms/internal/shared/middleware"
+
 	"github.com/google/uuid"
 )
 
@@ -22,6 +24,13 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 }
 
 func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+		return
+	}
+
 	var input CreateUserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -29,7 +38,7 @@ func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handler.service.CreateUser(r.Context(), input)
+	user, err := handler.service.CreateUser(r.Context(), claims.TenantID, input)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return
@@ -41,9 +50,10 @@ func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
-	tenantId, err := uuid.Parse(r.PathValue("tenant_id"))
-	if err != nil {
-		apierror.WriteError(w, apierror.Validation("Invalid tenant id"), handler.logger)
+	claims := middleware.GetClaims(r.Context())
+
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
 		return
 	}
 
@@ -54,7 +64,7 @@ func (handler *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handler.service.GetUserByID(r.Context(), userId, tenantId)
+	user, err := handler.service.GetUserByID(r.Context(), userId, claims.TenantID)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)

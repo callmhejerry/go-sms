@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/auth"
+	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/callmhejerry/sms/internal/shared/validation"
@@ -91,7 +91,7 @@ func (service *Service) CreateTenant(ctx context.Context, input CreateTenantRequ
 		ownerDescription := "Full access to everything within the school"
 		ownerRole, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
 			TenantID:    newTenant.ID,
-			Name:        string(identity.Owner),
+			Name:        string(constants.Owner),
 			Description: &ownerDescription,
 		})
 
@@ -112,9 +112,9 @@ func (service *Service) CreateTenant(ctx context.Context, input CreateTenantRequ
 			Name        string
 			Description string
 		}{
-			{Name: string(identity.Admin), Description: "Administrative access"},
-			{Name: string(identity.Teacher), Description: "Can manage classes, subject and grades"},
-			{Name: string(identity.Accountant), Description: "Can manage fees and payments"},
+			{Name: string(constants.Admin), Description: "Administrative access"},
+			{Name: string(constants.Teacher), Description: "Can manage classes, subject and grades"},
+			{Name: string(constants.Accountant), Description: "Can manage fees and payments"},
 		}
 
 		for _, r := range defaultRoles {

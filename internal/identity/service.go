@@ -9,6 +9,7 @@ import (
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/auth"
+	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -31,16 +32,7 @@ var (
 	InactiveUser       = apierror.New("user_inactive", "Invalid email or password", http.StatusUnauthorized)
 )
 
-type RoleName string
-
-const (
-	Owner      RoleName = "owner"
-	Admin      RoleName = "admin"
-	Teacher    RoleName = "teacher"
-	Accountant RoleName = "accountant"
-)
-
-func (service *Service) CreateUser(ctx context.Context, input CreateUserRequest) (*store.User, error) {
+func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, input CreateUserRequest) (*store.User, error) {
 	email := strings.TrimSpace(input.Email)
 	firstName := strings.TrimSpace(input.FirstName)
 	lastName := strings.TrimSpace(input.LastName)
@@ -69,7 +61,7 @@ func (service *Service) CreateUser(ctx context.Context, input CreateUserRequest)
 
 	newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
 		TenantID: pgtype.UUID{
-			Bytes: [16]byte(input.TenantID),
+			Bytes: [16]byte(tenantId),
 			Valid: true,
 		},
 		Email:        input.Email,
@@ -215,7 +207,7 @@ func (service *Service) GetUserRoles(ctx context.Context, userId uuid.UUID) ([]s
 	return roles, nil
 }
 
-func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleName RoleName) (bool, error) {
+func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleName constants.RoleName) (bool, error) {
 
 	userRoles, err := service.queries.GetUserRoles(ctx, pgtype.UUID{Bytes: userId, Valid: true})
 
@@ -226,9 +218,11 @@ func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleN
 	fmt.Printf("User roles: %v", userRoles)
 
 	if slices.ContainsFunc(userRoles, func(role store.Role) bool {
-		return role.Name == string(Owner) || role.Name == string(roleName)
+		return role.Name == string(constants.Owner) || role.Name == string(roleName)
 	}) {
 		return true, nil
 	}
 	return false, nil
 }
+
+// func (service *Service) GetUser(ctx context.Context)
