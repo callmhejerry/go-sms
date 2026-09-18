@@ -53,7 +53,7 @@ func main() {
 	// Services
 	tenantService := tenant.NewService(pool, queries)
 	identityService := identity.NewService(queries, jwtManager)
-	academicService := academic.NewService(queries)
+	academicService := academic.NewService(queries, pool)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log)

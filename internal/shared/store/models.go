@@ -37,6 +37,18 @@ type ClassArm struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Parent struct {
+	ID          pgtype.UUID        `json:"id"`
+	TenantID    pgtype.UUID        `json:"tenant_id"`
+	FirstName   string             `json:"first_name"`
+	LastName    string             `json:"last_name"`
+	Email       *string            `json:"email"`
+	PhoneNumber string             `json:"phone_number"`
+	Address     *string            `json:"address"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID          pgtype.UUID        `json:"id"`
 	TenantID    pgtype.UUID        `json:"tenant_id"`
@@ -44,6 +56,30 @@ type Role struct {
 	Description *string            `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Student struct {
+	ID                 pgtype.UUID        `json:"id"`
+	TenantID           pgtype.UUID        `json:"tenant_id"`
+	AdmissionNumber    string             `json:"admission_number"`
+	FirstName          string             `json:"first_name"`
+	LastName           string             `json:"last_name"`
+	MiddleName         *string            `json:"middle_name"`
+	Gender             string             `json:"gender"`
+	DateOfBirth        pgtype.Date        `json:"date_of_birth"`
+	Status             string             `json:"status"`
+	CurrentClassArmID  pgtype.UUID        `json:"current_class_arm_id"`
+	AdmissionSessionID pgtype.UUID        `json:"admission_session_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StudentParent struct {
+	StudentID    pgtype.UUID        `json:"student_id"`
+	ParentID     pgtype.UUID        `json:"parent_id"`
+	Relationship string             `json:"relationship"`
+	IsPrimary    bool               `json:"is_primary"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type Tenant struct {
