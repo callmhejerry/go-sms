@@ -2,7 +2,6 @@ package identity
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -214,8 +213,6 @@ func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleN
 	if err != nil {
 		return false, apierror.Internal(err, "failed to check role")
 	}
-
-	fmt.Printf("User roles: %v", userRoles)
 
 	if slices.ContainsFunc(userRoles, func(role store.Role) bool {
 		return role.Name == string(constants.Owner) || role.Name == string(roleName)

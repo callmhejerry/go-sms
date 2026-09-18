@@ -21,15 +21,14 @@ func TranslateError(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
-		case "23505": //unique_violation
-			return mapUniqueViolation(pgErr)
-		case "23503":
+		case "23503": // foreign_key_violation
 			return apierror.Validation("referenced record does not exist")
-		case "23502":
+		case "23502": // not_null_violation
 			return apierror.Validation("missing required field")
 		}
 	}
-	return apierror.Internal(err, "Database error")
+
+	return apierror.Internal(err, "database error")
 }
 
 func mapUniqueViolation(pgErr *pgconn.PgError) error {

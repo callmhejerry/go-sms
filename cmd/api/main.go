@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/callmhejerry/sms/internal/academic"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/config"
@@ -52,14 +53,17 @@ func main() {
 	// Services
 	tenantService := tenant.NewService(pool, queries)
 	identityService := identity.NewService(queries, jwtManager)
+	academicService := academic.NewService(queries)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log)
 	identityHandler := identity.NewHandler(identityService, log)
+	academicHandler := academic.NewHandler(academicService, log)
 
 	handlers := server.Handlers{
 		Tenant:   tenantHandler,
 		Identity: identityHandler,
+		Academic: academicHandler,
 	}
 
 	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)

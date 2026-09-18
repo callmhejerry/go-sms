@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/callmhejerry/sms/internal/academic"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
@@ -21,6 +22,7 @@ type Server struct {
 type Handlers struct {
 	Tenant   *tenant.Handler
 	Identity *identity.Handler
+	Academic *academic.Handler
 }
 
 func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers, jwtManger *auth.JWTManager, roleChecker middleware.RoleChecker) *Server {
@@ -39,16 +41,28 @@ func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers
 	// --------------------------
 	// Protected routes
 	// --------------------------
+
+	adminOnly := middleware.RequireRole(roleChecker, "admin")
+
 	protectedMux := http.NewServeMux()
 	protectedMux.HandleFunc("GET /api/v1/tenants", handlers.Tenant.ListTenants)
 	protectedMux.HandleFunc("GET /api/v1/tenants/{id}", handlers.Tenant.GetTenant)
 
 	// IDENTITY ROUTE
 
-	adminOnly := middleware.RequireRole(roleChecker, "admin")
-
 	protectedMux.Handle("POST /api/v1/users", adminOnly(http.HandlerFunc(handlers.Identity.CreateUser)))
 	protectedMux.HandleFunc("GET /api/v1/tenants/{tenant_id}/users/{id}", handlers.Identity.GetUser)
+
+	// ACADEMIC ROUTE
+	protectedMux.Handle("POST /api/v1/academic-sessions", adminOnly(http.HandlerFunc(handlers.Academic.CreateAcademicSession)))
+	protectedMux.HandleFunc("GET /api/v1/academic-sessions", handlers.Academic.ListAcademicSessions)
+	protectedMux.HandleFunc("GET /api/v1/academic-sessions/current", handlers.Academic.GetCurrentSession)
+
+	protectedMux.Handle("POST /api/v1/classes", adminOnly(http.HandlerFunc(handlers.Academic.CreateClass)))
+	protectedMux.HandleFunc("GET /api/v1/classes", handlers.Academic.ListClasses)
+
+	protectedMux.Handle("POST /api/v1/class-arms", adminOnly(http.HandlerFunc(handlers.Academic.CreateClassArm)))
+	protectedMux.HandleFunc("GET /api/v1/classes/{class_id}/arms", handlers.Academic.ListClassArms)
 
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
