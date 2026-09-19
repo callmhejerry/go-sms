@@ -64,6 +64,11 @@ func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers
 	protectedMux.Handle("POST /api/v1/class-arms", adminOnly(http.HandlerFunc(handlers.Academic.CreateClassArm)))
 	protectedMux.HandleFunc("GET /api/v1/classes/{class_id}/arms", handlers.Academic.ListClassArms)
 
+	protectedMux.Handle("POST /api/v1/students", adminOnly(http.HandlerFunc(handlers.Academic.CreateStudent)))
+	protectedMux.HandleFunc("GET /api/v1/students", handlers.Academic.ListStudents)
+	protectedMux.HandleFunc("GET /api/v1/students/{id}", handlers.Academic.GetStudent)
+	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Academic.GetStudentParents)
+
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
 	mux.Handle("/", protectedHandler)

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
@@ -19,7 +18,6 @@ func RequireRole(checker RoleChecker, roleName constants.RoleName) func(http.Han
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims := GetClaims(r.Context())
 
-			fmt.Printf("Gotten claims %v\n", claims)
 			if claims == nil {
 				apierror.WriteError(w, apierror.ErrUnauthorized, nil)
 				return

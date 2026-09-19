@@ -22,6 +22,7 @@ type Service struct {
 func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
 	return &Service{
 		queries: queries,
+		pool:    pool,
 	}
 }
 
@@ -174,25 +175,25 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 	if lastName == "" {
 		return nil, apierror.Validation("last_name is required")
 	}
-	if gender != string(constants.Male) || gender != string(constants.Female) {
+	if gender != string(constants.Male) && gender != string(constants.Female) {
 		return nil, apierror.Validation("gender must either be male or female")
 	}
 
 	var newStudent store.Student
 
 	err := database.WithTx(ctx, service.pool, func(q *store.Queries) error {
-		var classArmId *pgtype.UUID
-		var academicSessionId *pgtype.UUID
+		var classArmId pgtype.UUID
+		var academicSessionId pgtype.UUID
 
 		if request.CurrentClassArm != nil {
-			classArm, err := q.GetAcademicSessionById(ctx, store.GetAcademicSessionByIdParams{
-				ID:       pgtype.UUID{Bytes: *request.AdmissionSession, Valid: true},
+			classArm, err := q.GetClassByID(ctx, store.GetClassByIDParams{
+				ID:       pgtype.UUID{Bytes: *request.CurrentClassArm, Valid: true},
 				TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
 			})
 			if err != nil {
 				return apierror.Validation("Invalid class arm id")
 			}
-			classArmId = &classArm.ID
+			classArmId = classArm.ID
 		}
 
 		if request.AdmissionSession != nil {
@@ -203,7 +204,7 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 			if err != nil {
 				return apierror.Validation("Invalid academic session")
 			}
-			academicSessionId = &academicSession.ID
+			academicSessionId = academicSession.ID
 		}
 
 		student, err := q.CreateStudent(ctx, store.CreateStudentParams{
@@ -215,8 +216,8 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 			Gender:             gender,
 			DateOfBirth:        pgtype.Date{Time: request.DateOfBirth, Valid: true},
 			Status:             string(constants.Active),
-			CurrentClassArmID:  *classArmId,
-			AdmissionSessionID: *academicSessionId,
+			CurrentClassArmID:  classArmId,
+			AdmissionSessionID: academicSessionId,
 		})
 
 		if err != nil {
