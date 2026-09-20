@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/callmhejerry/sms/internal/academic"
+	academicsession "github.com/callmhejerry/sms/internal/academic/academic_session"
+	"github.com/callmhejerry/sms/internal/academic/classes"
+	"github.com/callmhejerry/sms/internal/academic/student"
 	"github.com/callmhejerry/sms/internal/admission"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
@@ -21,13 +23,22 @@ type Server struct {
 }
 
 type Handlers struct {
-	Tenant    *tenant.Handler
-	Identity  *identity.Handler
-	Academic  *academic.Handler
-	Admission *admission.Handler
+	Tenant          *tenant.Handler
+	Identity        *identity.Handler
+	AcademicSession *academicsession.Handler
+	Classes         *classes.Handler
+	Admission       *admission.Handler
+	Student         *student.Handler
 }
 
-func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers, jwtManger *auth.JWTManager, roleChecker middleware.RoleChecker) *Server {
+func New(
+	port string,
+	pool *pgxpool.Pool,
+	logger *slog.Logger,
+	handlers Handlers,
+	jwtManger *auth.JWTManager,
+	roleChecker middleware.RoleChecker,
+) *Server {
 	mux := http.NewServeMux()
 
 	// --------------------------
@@ -56,20 +67,21 @@ func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers
 	protectedMux.HandleFunc("GET /api/v1/tenants/{tenant_id}/users/{id}", handlers.Identity.GetUser)
 
 	// ACADEMIC ROUTE
-	protectedMux.Handle("POST /api/v1/academic-sessions", adminOnly(http.HandlerFunc(handlers.Academic.CreateAcademicSession)))
-	protectedMux.HandleFunc("GET /api/v1/academic-sessions", handlers.Academic.ListAcademicSessions)
-	protectedMux.HandleFunc("GET /api/v1/academic-sessions/current", handlers.Academic.GetCurrentSession)
+	protectedMux.Handle("POST /api/v1/academic-sessions", adminOnly(http.HandlerFunc(handlers.AcademicSession.CreateAcademicSession)))
+	protectedMux.HandleFunc("GET /api/v1/academic-sessions", handlers.AcademicSession.ListAcademicSessions)
+	protectedMux.HandleFunc("GET /api/v1/academic-sessions/current", handlers.AcademicSession.GetCurrentSession)
 
-	protectedMux.Handle("POST /api/v1/classes", adminOnly(http.HandlerFunc(handlers.Academic.CreateClass)))
-	protectedMux.HandleFunc("GET /api/v1/classes", handlers.Academic.ListClasses)
+	// CLASSES ROUTES
+	protectedMux.Handle("POST /api/v1/classes", adminOnly(http.HandlerFunc(handlers.Classes.CreateClass)))
+	protectedMux.HandleFunc("GET /api/v1/classes", handlers.Classes.ListClasses)
+	protectedMux.Handle("POST /api/v1/class-arms", adminOnly(http.HandlerFunc(handlers.Classes.CreateClassArm)))
+	protectedMux.HandleFunc("GET /api/v1/classes/{class_id}/arms", handlers.Classes.ListClassArms)
 
-	protectedMux.Handle("POST /api/v1/class-arms", adminOnly(http.HandlerFunc(handlers.Academic.CreateClassArm)))
-	protectedMux.HandleFunc("GET /api/v1/classes/{class_id}/arms", handlers.Academic.ListClassArms)
-
-	protectedMux.Handle("POST /api/v1/students", adminOnly(http.HandlerFunc(handlers.Academic.CreateStudent)))
-	protectedMux.HandleFunc("GET /api/v1/students", handlers.Academic.ListStudents)
-	protectedMux.HandleFunc("GET /api/v1/students/{id}", handlers.Academic.GetStudent)
-	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Academic.GetStudentParents)
+	// STUDENTS ROUTES
+	protectedMux.Handle("POST /api/v1/students", adminOnly(http.HandlerFunc(handlers.Student.CreateStudent)))
+	protectedMux.HandleFunc("GET /api/v1/students", handlers.Student.ListStudents)
+	protectedMux.HandleFunc("GET /api/v1/students/{id}", handlers.Student.GetStudent)
+	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Student.GetStudentParents)
 
 	// ADMISSIONS ROUTE
 	protectedMux.Handle("POST /api/v1/admissions", adminOnly(http.HandlerFunc(handlers.Admission.CreateAdmission)))

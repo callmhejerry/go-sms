@@ -6,7 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/callmhejerry/sms/internal/academic"
+	academicsession "github.com/callmhejerry/sms/internal/academic/academic_session"
+	"github.com/callmhejerry/sms/internal/academic/classes"
+	"github.com/callmhejerry/sms/internal/academic/student"
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/database"
@@ -16,14 +18,22 @@ import (
 )
 
 type Service struct {
-	queries  *store.Queries
-	academic *academic.Service
+	queries         *store.Queries
+	studentService  *student.Service
+	academicService *academicsession.Service
+	classService    *classes.Service
 }
 
-func NewService(queries *store.Queries, academicService *academic.Service) *Service {
+func NewService(
+	queries *store.Queries,
+	studentService *student.Service,
+	academicSessionService *academicsession.Service,
+	classService *classes.Service,
+) *Service {
 	return &Service{
-		queries:  queries,
-		academic: academicService,
+		queries:         queries,
+		studentService:  studentService,
+		academicService: academicSessionService,
 	}
 }
 func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID, request CreateAdmissionRequest) (*store.Admission, error) {
@@ -45,7 +55,7 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 		return nil, apierror.Validation("Invalid gender, gender must be either male or female")
 	}
 
-	academicSession, err := service.academic.GetAcademicSessionById(
+	academicSession, err := service.academicService.GetAcademicSessionById(
 		ctx, tenantId, request.AcademicSessionID,
 	)
 
@@ -53,7 +63,7 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 		return nil, err
 	}
 
-	preferredClass, err := service.academic.GetClassById(ctx, tenantId, request.PreferredClassID)
+	preferredClass, err := service.classService.GetClassById(ctx, tenantId, request.PreferredClassID)
 
 	if err != nil {
 		return nil, err
@@ -106,7 +116,7 @@ func (service *Service) AcceptAdmission(ctx context.Context, tenantId, admission
 	}
 	admissionNumber := fmt.Sprintf("ADM/%s/%d", time.Now().Format("2006"), time.Now().Unix()%10000)
 
-	student, err := service.academic.CreateStudent(ctx, tenantId, academic.CreateStudentRequest{
+	student, err := service.studentService.CreateStudent(ctx, tenantId, student.CreateStudentRequest{
 		AdmissionNumber:  admissionNumber,
 		FirstName:        admission.FirstName,
 		LastName:         admission.LastName,

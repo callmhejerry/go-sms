@@ -224,6 +224,66 @@ func (q *Queries) GetStudentByID(ctx context.Context, arg GetStudentByIDParams) 
 	return i, err
 }
 
+const getStudentById = `-- name: GetStudentById :one
+SELECT s.id, s.tenant_id, s.admission_number, s.first_name, s.last_name, s.middle_name, s.gender, s.date_of_birth, s.status, s.current_class_arm_id, s.admission_session_id, s.created_at, s.updated_at, 
+    c.name as class_name,
+    ca.name as class_arm_name,
+    sess.name as admission_session_name
+FROM students s
+LEFT JOIN class_arms ca ON ca.id = s.current_class_arm_id
+LEFT JOIN classes c ON c.id = ca.class_id
+LEFT JOIN academic_sessions sess ON sess.id = s.academic_session_id
+WHERE s.id = $1 AND s.tenant_id = $2
+`
+
+type GetStudentByIdParams struct {
+	ID       pgtype.UUID `json:"id"`
+	TenantID pgtype.UUID `json:"tenant_id"`
+}
+
+type GetStudentByIdRow struct {
+	ID                   pgtype.UUID        `json:"id"`
+	TenantID             pgtype.UUID        `json:"tenant_id"`
+	AdmissionNumber      string             `json:"admission_number"`
+	FirstName            string             `json:"first_name"`
+	LastName             string             `json:"last_name"`
+	MiddleName           *string            `json:"middle_name"`
+	Gender               string             `json:"gender"`
+	DateOfBirth          pgtype.Date        `json:"date_of_birth"`
+	Status               string             `json:"status"`
+	CurrentClassArmID    pgtype.UUID        `json:"current_class_arm_id"`
+	AdmissionSessionID   pgtype.UUID        `json:"admission_session_id"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	ClassName            *string            `json:"class_name"`
+	ClassArmName         *string            `json:"class_arm_name"`
+	AdmissionSessionName *string            `json:"admission_session_name"`
+}
+
+func (q *Queries) GetStudentById(ctx context.Context, arg GetStudentByIdParams) (GetStudentByIdRow, error) {
+	row := q.db.QueryRow(ctx, getStudentById, arg.ID, arg.TenantID)
+	var i GetStudentByIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.AdmissionNumber,
+		&i.FirstName,
+		&i.LastName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.Status,
+		&i.CurrentClassArmID,
+		&i.AdmissionSessionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ClassName,
+		&i.ClassArmName,
+		&i.AdmissionSessionName,
+	)
+	return i, err
+}
+
 const getStudentsByParent = `-- name: GetStudentsByParent :many
 SELECT s.id, s.tenant_id, s.admission_number, s.first_name, s.last_name, s.middle_name, s.gender, s.date_of_birth, s.status, s.current_class_arm_id, s.admission_session_id, s.created_at, s.updated_at , sp.relationship, sp.is_primary FROM students s
 INNER JOIN student_parents sp ON sp.student_id = s.id
@@ -353,4 +413,122 @@ func (q *Queries) ListStudents(ctx context.Context, tenantID pgtype.UUID) ([]Stu
 		return nil, err
 	}
 	return items, nil
+}
+
+const searchStudents = `-- name: SearchStudents :many
+SELECT id, tenant_id, admission_number, first_name, last_name, middle_name, gender, date_of_birth, status, current_class_arm_id, admission_session_id, created_at, updated_at FROM students
+WHERE tenant_id = $1
+    AND (
+        $2::text IS NULL OR
+        first_name ILIKE '%' || $2 || '%' OR 
+        last_name ILIKE '%' || $2 || '%' OR
+        admission_number ILIKE '%' || $2 || '%'
+    )
+    AND ($3::uuid IS NULL OR current_class_arm_id = $3)
+    AND ($4::text IS NULL OR status = $4)
+ORDER BY last_name, first_name
+`
+
+type SearchStudentsParams struct {
+	TenantID pgtype.UUID `json:"tenant_id"`
+	Column2  string      `json:"column_2"`
+	Column3  pgtype.UUID `json:"column_3"`
+	Column4  string      `json:"column_4"`
+}
+
+func (q *Queries) SearchStudents(ctx context.Context, arg SearchStudentsParams) ([]Student, error) {
+	rows, err := q.db.Query(ctx, searchStudents,
+		arg.TenantID,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Student{}
+	for rows.Next() {
+		var i Student
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.AdmissionNumber,
+			&i.FirstName,
+			&i.LastName,
+			&i.MiddleName,
+			&i.Gender,
+			&i.DateOfBirth,
+			&i.Status,
+			&i.CurrentClassArmID,
+			&i.AdmissionSessionID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateStudent = `-- name: UpdateStudent :one
+UPDATE students
+SET 
+    first_name = COALESCE($3, first_name),
+    last_name = COALESCE($4, last_name),
+    middle_name = COALESCE($5, middle_name),
+    gender = COALESCE($6, gender),
+    date_of_birth = COALESCE($7, date_of_birth),
+    current_class_arm_id = COALESCE($8, current_class_arm_id),
+    status = COALESCE($9, status),
+    updated_at = NOW()
+WHERE id = $1 AND tenant_id = $2
+RETURNING id, tenant_id, admission_number, first_name, last_name, middle_name, gender, date_of_birth, status, current_class_arm_id, admission_session_id, created_at, updated_at
+`
+
+type UpdateStudentParams struct {
+	ID                pgtype.UUID `json:"id"`
+	TenantID          pgtype.UUID `json:"tenant_id"`
+	FirstName         string      `json:"first_name"`
+	LastName          string      `json:"last_name"`
+	MiddleName        *string     `json:"middle_name"`
+	Gender            string      `json:"gender"`
+	DateOfBirth       pgtype.Date `json:"date_of_birth"`
+	CurrentClassArmID pgtype.UUID `json:"current_class_arm_id"`
+	Status            string      `json:"status"`
+}
+
+func (q *Queries) UpdateStudent(ctx context.Context, arg UpdateStudentParams) (Student, error) {
+	row := q.db.QueryRow(ctx, updateStudent,
+		arg.ID,
+		arg.TenantID,
+		arg.FirstName,
+		arg.LastName,
+		arg.MiddleName,
+		arg.Gender,
+		arg.DateOfBirth,
+		arg.CurrentClassArmID,
+		arg.Status,
+	)
+	var i Student
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.AdmissionNumber,
+		&i.FirstName,
+		&i.LastName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.Status,
+		&i.CurrentClassArmID,
+		&i.AdmissionSessionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

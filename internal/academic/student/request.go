@@ -1,25 +1,6 @@
-package academic
+package student
 
-import (
-	"github.com/google/uuid"
-)
-
-type CreateAcademicSessionRequest struct {
-	Name      string `json:"name" validate:"required"`
-	StartDate string `json:"start_date" validate:"required,date"`
-	EndDate   string `json:"end_date" validate:"required,date"`
-	IsCurrent bool   `json:"is_current" validate:"required"`
-}
-
-type CreateClassRequest struct {
-	Name       string `json:"name" validate:"required"`
-	LevelOrder int    `json:"level_order" validate:"required"`
-}
-
-type CreateClassArmRequest struct {
-	ClassID uuid.UUID `json:"class_id" validate:"required,uuid"`
-	Name    string    `json:"name" validate:"required"`
-}
+import "github.com/google/uuid"
 
 type CreateStudentRequest struct {
 	AdmissionNumber  string          `json:"admission_number" validate:"required"`
@@ -41,4 +22,20 @@ type ParentRequest struct {
 	Address      string `json:"address" validate:"required"`
 	Relationship string `json:"relationship" validate:"required"`
 	IsPrimary    bool   `json:"is_primary" validate:"required"`
+}
+
+type SearchStudentRequest struct {
+	Query      *string    `json:"query"` //name or admission number
+	ClassArmId *uuid.UUID `json:"class_arm_id" validate:"omitempty,uuid"`
+	Status     *string    `json:"status"`
+}
+
+type UpdateStudentRequest struct {
+	FirstName         *string    `json:"first_name" validate:"omitempty,min=3"`
+	LastName          *string    `json:"last_name" validate:"omitempty,min=3"`
+	MiddleName        *string    `json:"middle_name" validate:"omitempty,min=3"`
+	Gender            *string    `json:"gender" validate:"omitempty,oneof=male female"`
+	DateOfBirth       *string    `json:"date_of_birth" validate:"omitempty,date_of_birth"`
+	CurrentClassArmID *uuid.UUID `json:"current_class_arm_id" validate:"omitempty,uuid"`
+	Status            *string    `json:"status"`
 }

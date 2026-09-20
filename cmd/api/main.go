@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/callmhejerry/sms/internal/academic"
+	academicsession "github.com/callmhejerry/sms/internal/academic/academic_session"
+	"github.com/callmhejerry/sms/internal/academic/classes"
+	"github.com/callmhejerry/sms/internal/academic/student"
 	"github.com/callmhejerry/sms/internal/admission"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
@@ -57,20 +59,27 @@ func main() {
 	// Services
 	tenantService := tenant.NewService(pool, queries)
 	identityService := identity.NewService(queries, jwtManager)
-	academicService := academic.NewService(queries, pool)
-	admissionService := admission.NewService(queries, academicService)
+	academicSessionService := academicsession.NewService(queries, pool)
+	studentService := student.NewService(queries, pool)
+	classService := classes.NewService(queries, pool)
+
+	admissionService := admission.NewService(queries, studentService, academicSessionService, classService)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log, appValidator)
 	identityHandler := identity.NewHandler(identityService, log, appValidator)
-	academicHandler := academic.NewHandler(academicService, log, appValidator)
+	academicSessionHandler := academicsession.NewHandler(academicSessionService, log, appValidator)
+	classHandler := classes.NewHandler(classService, log, appValidator)
 	admissionHandler := admission.NewHandler(admissionService, log, appValidator)
+	studentHandler := student.NewHandler(studentService, log, appValidator)
 
 	handlers := server.Handlers{
-		Tenant:    tenantHandler,
-		Identity:  identityHandler,
-		Academic:  academicHandler,
-		Admission: admissionHandler,
+		Tenant:          tenantHandler,
+		Identity:        identityHandler,
+		AcademicSession: academicSessionHandler,
+		Admission:       admissionHandler,
+		Classes:         classHandler,
+		Student:         studentHandler,
 	}
 
 	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)

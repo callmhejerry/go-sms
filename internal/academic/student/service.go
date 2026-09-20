@@ -1,4 +1,4 @@
-package academic
+package student
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/callmhejerry/sms/internal/academic"
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/database"
@@ -28,170 +29,6 @@ func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
 		queries: queries,
 		pool:    pool,
 	}
-}
-
-func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid.UUID, request CreateAcademicSessionRequest) (*store.AcademicSession, error) {
-	name := strings.TrimSpace(request.Name)
-	startDate, _ := time.Parse("2026-01-29", request.StartDate)
-	endDate, _ := time.Parse("2026-01-30", request.EndDate)
-
-	if startDate.IsZero() || endDate.IsZero() {
-		return nil, apierror.Validation("start_date and end_date is required")
-	}
-
-	if endDate.Before(startDate) {
-		return nil, apierror.Validation("end_date cannot be before start_date")
-	}
-	if request.IsCurrent {
-		_ = service.queries.SetCurrentAcademicSession(ctx, pgtype.UUID{
-			Bytes: tenantId,
-			Valid: true,
-		})
-	}
-
-	session, err := service.queries.CreateAcademicSession(ctx, store.CreateAcademicSessionParams{
-		TenantID: pgtype.UUID{
-			Bytes: tenantId,
-			Valid: true,
-		},
-		Name: name,
-		StartDate: pgtype.Date{
-			Time:  startDate,
-			Valid: true,
-		},
-		EndDate: pgtype.Date{
-			Time:  endDate,
-			Valid: true,
-		},
-		IsCurrent: request.IsCurrent,
-	})
-
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return &session, nil
-}
-
-func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.UUID) ([]store.AcademicSession, error) {
-	sessions, err := service.queries.ListAcademicSessions(ctx, pgtype.UUID{
-		Bytes: tenantId,
-		Valid: true,
-	})
-
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return sessions, nil
-}
-
-func (service *Service) GetCurrentAcademicSession(ctx context.Context, tenantId uuid.UUID) (*store.AcademicSession, error) {
-	currentSession, err := service.queries.GetCurrentAcademicSession(ctx, pgtype.UUID{
-		Bytes: tenantId,
-		Valid: true,
-	})
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return &currentSession, nil
-}
-
-func (service *Service) GetAcademicSessionById(ctx context.Context, tenantId, academicSessionId uuid.UUID) (*store.AcademicSession, error) {
-	academicSession, err := service.queries.GetAcademicSessionById(ctx, store.GetAcademicSessionByIdParams{
-		ID:       pgtype.UUID{Bytes: academicSessionId, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
-	})
-
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			message := fmt.Sprintf("Academic session with id %s. Not found", academicSessionId.String())
-			return nil, apierror.NotFound(message)
-		}
-		return nil, translateAcademicError(err)
-	}
-
-	return &academicSession, nil
-}
-
-func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, request CreateClassRequest) (*store.Class, error) {
-	name := strings.TrimSpace(strings.ToLower(request.Name))
-
-	if name == "" {
-		return nil, apierror.Validation("class name is required")
-	}
-
-	class, err := service.queries.CreateClass(ctx, store.CreateClassParams{
-		TenantID:   pgtype.UUID{Bytes: tenantId, Valid: true},
-		Name:       name,
-		LevelOrder: int32(request.LevelOrder),
-	})
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return &class, nil
-}
-
-func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid.UUID) (*store.Class, error) {
-	class, err := service.queries.GetClassByID(ctx, store.GetClassByIDParams{
-		ID:       pgtype.UUID{Bytes: classId, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			message := fmt.Sprintf("class with id %s. Not found", classId.String())
-			return nil, apierror.NotFound(message)
-		}
-		return nil, translateAcademicError(err)
-	}
-	return &class, nil
-}
-
-func (service *Service) ListClasses(ctx context.Context, tenantId uuid.UUID) ([]store.Class, error) {
-	classes, err := service.queries.ListClasses(ctx, pgtype.UUID{Bytes: tenantId, Valid: true})
-
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return classes, nil
-}
-
-func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, request CreateClassArmRequest) (*store.ClassArm, error) {
-	name := strings.TrimSpace(strings.ToLower(request.Name))
-
-	if name == "" {
-		return nil, apierror.Validation("Class arm name is required")
-	}
-
-	class, err := service.queries.GetClassByID(ctx, store.GetClassByIDParams{
-		ID:       pgtype.UUID{Bytes: request.ClassID, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
-	})
-
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-
-	classArm, err := service.queries.CreateClassArm(ctx, store.CreateClassArmParams{
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
-		ClassID:  class.ID,
-		Name:     name,
-	})
-
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return &classArm, nil
-}
-
-func (service *Service) ListClassArms(ctx context.Context, tenantId uuid.UUID, classId uuid.UUID) ([]store.ClassArm, error) {
-	classArms, err := service.queries.ListClassArms(ctx, store.ListClassArmsParams{
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
-		ClassID:  pgtype.UUID{Bytes: classId, Valid: true},
-	})
-
-	if err != nil {
-		return nil, translateAcademicError(err)
-	}
-	return classArms, nil
 }
 
 func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, request CreateStudentRequest) (*store.Student, error) {
@@ -255,7 +92,7 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 		})
 
 		if err != nil {
-			return translateAcademicError(err)
+			return academic.TranslateAcademicError(err)
 		}
 
 		for _, p := range request.Parents {
@@ -285,7 +122,7 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 				Address:     &p.Address,
 			})
 			if err != nil {
-				return translateAcademicError(err)
+				return academic.TranslateAcademicError(err)
 			}
 
 			if err := q.LinkStudentParent(ctx, store.LinkStudentParentParams{
@@ -294,7 +131,7 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 				Relationship: p.Relationship,
 				IsPrimary:    p.IsPrimary,
 			}); err != nil {
-				return translateAcademicError(err)
+				return academic.TranslateAcademicError(err)
 			}
 		}
 
@@ -316,7 +153,7 @@ func (service *Service) GetStudent(ctx context.Context, tenantId, studentId uuid
 	})
 
 	if err != nil {
-		return nil, translateAcademicError(err)
+		return nil, academic.TranslateAcademicError(err)
 	}
 
 	return &student, nil
@@ -328,7 +165,7 @@ func (service *Service) ListStudents(ctx context.Context, tenantId uuid.UUID) ([
 		Valid: true,
 	})
 	if err != nil {
-		return nil, translateAcademicError(err)
+		return nil, academic.TranslateAcademicError(err)
 	}
 
 	return students, nil
@@ -341,7 +178,7 @@ func (service *Service) GetStudentParents(ctx context.Context, tenantId, student
 	})
 
 	if err != nil {
-		return nil, translateAcademicError(err)
+		return nil, academic.TranslateAcademicError(err)
 	}
 	return parents, nil
 }
