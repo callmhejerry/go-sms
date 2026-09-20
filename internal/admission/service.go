@@ -11,7 +11,6 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
-	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -31,6 +30,7 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 	firstName := strings.TrimSpace(request.FirstName)
 	lastName := strings.TrimSpace(request.LastName)
 	gender := strings.TrimSpace(strings.ToLower(request.Gender))
+	dateOfBirth, err := time.Parse("2026-01-30", request.DateOfBirth)
 
 	parentFirstName := strings.TrimSpace(request.ParentFirstName)
 	parentLastName := strings.TrimSpace(request.ParentLastName)
@@ -43,13 +43,6 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 
 	if gender != string(constants.Male) && gender != string(constants.Female) {
 		return nil, apierror.Validation("Invalid gender, gender must be either male or female")
-	}
-	if !validation.IsValidDOB(request.DateOfBirth) {
-		return nil, apierror.Validation("Invalid date_of_birth, dob must be a date before today")
-	}
-
-	if !validation.IsValidEmail(parentEmail) {
-		return nil, apierror.Validation("invalid parent_email")
 	}
 
 	academicSession, err := service.academic.GetAcademicSessionById(
@@ -73,7 +66,7 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 		LastName:           lastName,
 		MiddleName:         request.MiddleName,
 		Gender:             gender,
-		DateOfBirth:        pgtype.Date{Time: request.DateOfBirth, Valid: true},
+		DateOfBirth:        pgtype.Date{Time: dateOfBirth, Valid: true},
 		PreferredClassID:   preferredClass.ID,
 		ParentFirstName:    parentFirstName,
 		ParentLastName:     parentLastName,
@@ -99,6 +92,7 @@ func (service *Service) ListAdmissions(ctx context.Context, tenantId uuid.UUID) 
 }
 
 func (service *Service) AcceptAdmission(ctx context.Context, tenantId, admissionId, reviewedBy uuid.UUID, classArmId *uuid.UUID) (*store.Admission, *store.Student, error) {
+
 	admission, err := service.queries.GetAdmissionById(ctx, store.GetAdmissionByIdParams{
 		ID:       pgtype.UUID{Bytes: admissionId, Valid: true},
 		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
@@ -118,7 +112,7 @@ func (service *Service) AcceptAdmission(ctx context.Context, tenantId, admission
 		LastName:         admission.LastName,
 		MiddleName:       admission.MiddleName,
 		Gender:           admission.Gender,
-		DateOfBirth:      admission.DateOfBirth.Time,
+		DateOfBirth:      admission.DateOfBirth.Time.Format("2026-01-30"),
 		CurrentClassArm:  classArmId,
 		AdmissionSession: (*uuid.UUID)(&admission.AcademicSessionID.Bytes),
 	})

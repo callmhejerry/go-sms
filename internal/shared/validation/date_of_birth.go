@@ -6,10 +6,10 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func (v *Validator) dateOfBirthValidator(fl validator.FieldLevel) bool {
+func (v *AppValidator) dateOfBirthValidator(fl validator.FieldLevel) bool {
 	value := fl.Field().String()
 
-	dob, err := time.Parse("2006-01-02", value)
+	dob, err := time.Parse("2006-01-28", value)
 	if err != nil {
 		return false
 	}

@@ -12,16 +12,16 @@ import (
 )
 
 type Handler struct {
-	service   *Service
-	logger    *slog.Logger
-	validator *validation.Validator
+	service      *Service
+	logger       *slog.Logger
+	appValidator *validation.AppValidator
 }
 
-func NewHandler(service *Service, logger *slog.Logger, validator *validation.Validator) *Handler {
+func NewHandler(service *Service, logger *slog.Logger, validator *validation.AppValidator) *Handler {
 	return &Handler{
-		service:   service,
-		logger:    logger,
-		validator: validator,
+		service:      service,
+		logger:       logger,
+		appValidator: validator,
 	}
 }
 
@@ -36,6 +36,11 @@ func (handler *Handler) CreateAdmission(w http.ResponseWriter, r *http.Request) 
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		apierror.WriteError(w, apierror.Validation("Invalid request body"), handler.logger)
+		return
+	}
+
+	if err := handler.appValidator.ValidateStruct(request); err != nil {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -81,17 +86,15 @@ func (handler *Handler) AcceptAdmission(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var body struct {
-		ClassArmID *uuid.UUID `json:"class_arm_id"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	var request AcceptAdmissionRequest
+	_ = json.NewDecoder(r.Body).Decode(&request)
 
 	admission, student, err := handler.service.AcceptAdmission(
 		r.Context(),
 		claims.TenantID,
 		admissionId,
 		claims.UserID,
-		body.ClassArmID,
+		request.ClassArmId,
 	)
 
 	if err != nil {

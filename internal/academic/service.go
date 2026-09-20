@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/constants"
@@ -30,17 +31,15 @@ func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
 }
 
 func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid.UUID, request CreateAcademicSessionRequest) (*store.AcademicSession, error) {
-
 	name := strings.TrimSpace(request.Name)
+	startDate, _ := time.Parse("2026-01-29", request.StartDate)
+	endDate, _ := time.Parse("2026-01-30", request.EndDate)
 
-	if name == "" {
-		return nil, apierror.Validation("name is required")
-	}
-	if request.StartDate.IsZero() || request.EndDate.IsZero() {
+	if startDate.IsZero() || endDate.IsZero() {
 		return nil, apierror.Validation("start_date and end_date is required")
 	}
 
-	if request.EndDate.Before(request.StartDate) {
+	if endDate.Before(startDate) {
 		return nil, apierror.Validation("end_date cannot be before start_date")
 	}
 	if request.IsCurrent {
@@ -57,11 +56,11 @@ func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid
 		},
 		Name: name,
 		StartDate: pgtype.Date{
-			Time:  request.StartDate,
+			Time:  startDate,
 			Valid: true,
 		},
 		EndDate: pgtype.Date{
-			Time:  request.EndDate,
+			Time:  endDate,
 			Valid: true,
 		},
 		IsCurrent: request.IsCurrent,
@@ -200,16 +199,8 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 	firstName := strings.TrimSpace(request.FirstName)
 	lastName := strings.TrimSpace(request.LastName)
 	gender := strings.TrimSpace(strings.ToLower(request.Gender))
+	dateOfBirth, _ := time.Parse("2026-01-30", request.DateOfBirth)
 
-	if admissionNumber == "" {
-		return nil, apierror.Validation("admission_number is required")
-	}
-	if firstName == "" {
-		return nil, apierror.Validation("first_name is required")
-	}
-	if lastName == "" {
-		return nil, apierror.Validation("last_name is required")
-	}
 	if gender != string(constants.Male) && gender != string(constants.Female) {
 		return nil, apierror.Validation("gender must either be male or female")
 	}
@@ -257,7 +248,7 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 			LastName:           lastName,
 			MiddleName:         request.MiddleName,
 			Gender:             gender,
-			DateOfBirth:        pgtype.Date{Time: request.DateOfBirth, Valid: true},
+			DateOfBirth:        pgtype.Date{Time: dateOfBirth, Valid: true},
 			Status:             string(constants.Active),
 			CurrentClassArmID:  classArmId,
 			AdmissionSessionID: academicSessionId,

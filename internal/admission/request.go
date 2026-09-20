@@ -1,8 +1,6 @@
 package admission
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -12,7 +10,7 @@ type CreateAdmissionRequest struct {
 	LastName          string    `json:"last_name" validate:"required"`
 	MiddleName        *string   `json:"middle_name"`
 	Gender            string    `json:"gender" validate:"required"`
-	DateOfBirth       time.Time `json:"date_of_birth" validate:"required"`
+	DateOfBirth       string    `json:"date_of_birth" validate:"required,date_of_birth"`
 	PreferredClassID  uuid.UUID `json:"preferred_class_id" validate:"required,uuid"`
 
 	ParentFirstName   string `json:"parent_first_name" validate:"required"`
@@ -20,4 +18,8 @@ type CreateAdmissionRequest struct {
 	ParentPhoneNumber string `json:"parent_phone_number" validate:"required"`
 	ParentEmail       string `json:"parent_email" validate:"required,email"`
 	Relationship      string `json:"relationship" validate:"required"`
+}
+
+type AcceptAdmissionRequest struct {
+	ClassArmId *uuid.UUID `json:"class_arm_id" validate:"omitempty,uuid"`
 }

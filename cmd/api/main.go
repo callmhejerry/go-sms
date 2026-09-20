@@ -52,7 +52,7 @@ func main() {
 	queries := store.New(pool)
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationHours)
 
-	validator := validation.NewValdiator()
+	appValidator := validation.NewValdiator()
 
 	// Services
 	tenantService := tenant.NewService(pool, queries)
@@ -61,10 +61,10 @@ func main() {
 	admissionService := admission.NewService(queries, academicService)
 
 	// Handlers
-	tenantHandler := tenant.NewHandler(tenantService, log)
-	identityHandler := identity.NewHandler(identityService, log)
-	academicHandler := academic.NewHandler(academicService, log)
-	admissionHandler := admission.NewHandler(admissionService, log, validator)
+	tenantHandler := tenant.NewHandler(tenantService, log, appValidator)
+	identityHandler := identity.NewHandler(identityService, log, appValidator)
+	academicHandler := academic.NewHandler(academicService, log, appValidator)
+	admissionHandler := admission.NewHandler(admissionService, log, appValidator)
 
 	handlers := server.Handlers{
 		Tenant:    tenantHandler,

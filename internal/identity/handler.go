@@ -7,19 +7,22 @@ import (
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
+	"github.com/callmhejerry/sms/internal/shared/validation"
 
 	"github.com/google/uuid"
 )
 
 type Handler struct {
-	service *Service
-	logger  *slog.Logger
+	service      *Service
+	logger       *slog.Logger
+	appValidator *validation.AppValidator
 }
 
-func NewHandler(service *Service, logger *slog.Logger) *Handler {
+func NewHandler(service *Service, logger *slog.Logger, appValidator *validation.AppValidator) *Handler {
 	return &Handler{
-		service: service,
-		logger:  logger,
+		service:      service,
+		logger:       logger,
+		appValidator: appValidator,
 	}
 }
 
@@ -35,6 +38,11 @@ func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		apierror.WriteError(w, apierror.Validation("invalid request body"), handler.logger)
+		return
+	}
+
+	if err := handler.appValidator.ValidateStruct(input); err != nil {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -80,6 +88,11 @@ func (handler *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		apierror.WriteError(w, apierror.Validation("Invalid request body"), handler.logger)
+		return
+	}
+
+	if err := handler.appValidator.ValidateStruct(request); err != nil {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
