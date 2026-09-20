@@ -21,6 +21,11 @@ func WriteError(w http.ResponseWriter, err error, logger *slog.Logger) {
 	var appError *AppError
 
 	if errors.As(err, &appError) {
+
+		if appError.HTTPStatus == http.StatusInternalServerError && logger != nil {
+			logger.Error("internal server error", slog.String("error", appError.Message))
+		}
+
 		writeJSON(w, appError.HTTPStatus, errorResponse{
 			Error: errorBody{
 				Code:    appError.Code,

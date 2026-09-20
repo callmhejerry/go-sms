@@ -19,6 +19,31 @@ type AcademicSession struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Admission struct {
+	ID                 pgtype.UUID        `json:"id"`
+	TenantID           pgtype.UUID        `json:"tenant_id"`
+	AcademicSessionID  pgtype.UUID        `json:"academic_session_id"`
+	FirstName          string             `json:"first_name"`
+	LastName           string             `json:"last_name"`
+	MiddleName         *string            `json:"middle_name"`
+	Gender             string             `json:"gender"`
+	DateOfBirth        pgtype.Date        `json:"date_of_birth"`
+	PreferredClassID   pgtype.UUID        `json:"preferred_class_id"`
+	Status             string             `json:"status"`
+	AdmissionNumber    *string            `json:"admission_number"`
+	StudentID          pgtype.UUID        `json:"student_id"`
+	ReviewedBy         pgtype.UUID        `json:"reviewed_by"`
+	ReviewedAt         pgtype.Timestamptz `json:"reviewed_at"`
+	RejectionReason    *string            `json:"rejection_reason"`
+	ParentFirstName    string             `json:"parent_first_name"`
+	ParentLastName     string             `json:"parent_last_name"`
+	ParentPhoneNumber  string             `json:"parent_phone_number"`
+	ParentEmail        string             `json:"parent_email"`
+	ParentRelationship string             `json:"parent_relationship"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Class struct {
 	ID         pgtype.UUID        `json:"id"`
 	TenantID   pgtype.UUID        `json:"tenant_id"`

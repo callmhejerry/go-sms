@@ -24,6 +24,10 @@ INSERT INTO class_arms (
 VALUES ($1, $2, $3)
 RETURNING *;
 
+-- name: GetClassArmByID :one
+SELECT * FROM class_arms
+WHERE id = $1 AND tenant_id = $2;
+
 -- name: ListClassArms :many
 SELECT * FROM class_arms
 WHERE tenant_id = $1 AND class_id = $2

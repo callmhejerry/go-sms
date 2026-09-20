@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/callmhejerry/sms/internal/academic"
+	"github.com/callmhejerry/sms/internal/admission"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/logger"
 	"github.com/callmhejerry/sms/internal/shared/server"
 	"github.com/callmhejerry/sms/internal/shared/store"
+	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/callmhejerry/sms/internal/tenant"
 	"github.com/joho/godotenv"
 )
@@ -50,20 +52,25 @@ func main() {
 	queries := store.New(pool)
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationHours)
 
+	validator := validation.NewValdiator()
+
 	// Services
 	tenantService := tenant.NewService(pool, queries)
 	identityService := identity.NewService(queries, jwtManager)
 	academicService := academic.NewService(queries, pool)
+	admissionService := admission.NewService(queries, academicService)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log)
 	identityHandler := identity.NewHandler(identityService, log)
 	academicHandler := academic.NewHandler(academicService, log)
+	admissionHandler := admission.NewHandler(admissionService, log, validator)
 
 	handlers := server.Handlers{
-		Tenant:   tenantHandler,
-		Identity: identityHandler,
-		Academic: academicHandler,
+		Tenant:    tenantHandler,
+		Identity:  identityHandler,
+		Academic:  academicHandler,
+		Admission: admissionHandler,
 	}
 
 	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)

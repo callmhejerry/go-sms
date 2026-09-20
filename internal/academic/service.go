@@ -2,6 +2,8 @@ package academic
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
@@ -10,6 +12,7 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -93,6 +96,23 @@ func (service *Service) GetCurrentAcademicSession(ctx context.Context, tenantId 
 	return &currentSession, nil
 }
 
+func (service *Service) GetAcademicSessionById(ctx context.Context, tenantId, academicSessionId uuid.UUID) (*store.AcademicSession, error) {
+	academicSession, err := service.queries.GetAcademicSessionById(ctx, store.GetAcademicSessionByIdParams{
+		ID:       pgtype.UUID{Bytes: academicSessionId, Valid: true},
+		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			message := fmt.Sprintf("Academic session with id %s. Not found", academicSessionId.String())
+			return nil, apierror.NotFound(message)
+		}
+		return nil, translateAcademicError(err)
+	}
+
+	return &academicSession, nil
+}
+
 func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, request CreateClassRequest) (*store.Class, error) {
 	name := strings.TrimSpace(strings.ToLower(request.Name))
 
@@ -106,6 +126,21 @@ func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, req
 		LevelOrder: int32(request.LevelOrder),
 	})
 	if err != nil {
+		return nil, translateAcademicError(err)
+	}
+	return &class, nil
+}
+
+func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid.UUID) (*store.Class, error) {
+	class, err := service.queries.GetClassByID(ctx, store.GetClassByIDParams{
+		ID:       pgtype.UUID{Bytes: classId, Valid: true},
+		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			message := fmt.Sprintf("class with id %s. Not found", classId.String())
+			return nil, apierror.NotFound(message)
+		}
 		return nil, translateAcademicError(err)
 	}
 	return &class, nil
@@ -186,11 +221,15 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 		var academicSessionId pgtype.UUID
 
 		if request.CurrentClassArm != nil {
-			classArm, err := q.GetClassByID(ctx, store.GetClassByIDParams{
+			classArm, err := q.GetClassArmByID(ctx, store.GetClassArmByIDParams{
 				ID:       pgtype.UUID{Bytes: *request.CurrentClassArm, Valid: true},
 				TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
 			})
 			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					message := fmt.Sprintf("class arm with id %s. Not found", request.CurrentClassArm.String())
+					return apierror.NotFound(message)
+				}
 				return apierror.Validation("Invalid class arm id")
 			}
 			classArmId = classArm.ID
@@ -202,6 +241,10 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 				TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
 			})
 			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					message := fmt.Sprintf("Academic session with id %s. Not found", academicSessionId.String())
+					return apierror.NotFound(message)
+				}
 				return apierror.Validation("Invalid academic session")
 			}
 			academicSessionId = academicSession.ID

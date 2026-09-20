@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/callmhejerry/sms/internal/academic"
+	"github.com/callmhejerry/sms/internal/admission"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
@@ -20,9 +21,10 @@ type Server struct {
 }
 
 type Handlers struct {
-	Tenant   *tenant.Handler
-	Identity *identity.Handler
-	Academic *academic.Handler
+	Tenant    *tenant.Handler
+	Identity  *identity.Handler
+	Academic  *academic.Handler
+	Admission *admission.Handler
 }
 
 func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers, jwtManger *auth.JWTManager, roleChecker middleware.RoleChecker) *Server {
@@ -68,6 +70,11 @@ func New(port string, pool *pgxpool.Pool, logger *slog.Logger, handlers Handlers
 	protectedMux.HandleFunc("GET /api/v1/students", handlers.Academic.ListStudents)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}", handlers.Academic.GetStudent)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Academic.GetStudentParents)
+
+	// ADMISSIONS ROUTE
+	protectedMux.Handle("POST /api/v1/admissions", adminOnly(http.HandlerFunc(handlers.Admission.CreateAdmission)))
+	protectedMux.Handle("GET /api/v1/admissions", adminOnly(http.HandlerFunc(handlers.Admission.ListAdmissions)))
+	protectedMux.Handle("POST /api/v1/admissions/{id}/accept", adminOnly(http.HandlerFunc(handlers.Admission.AcceptAdmission)))
 
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)

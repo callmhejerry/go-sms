@@ -67,6 +67,30 @@ func (q *Queries) CreateClassArm(ctx context.Context, arg CreateClassArmParams) 
 	return i, err
 }
 
+const getClassArmByID = `-- name: GetClassArmByID :one
+SELECT id, tenant_id, class_id, name, created_at, updated_at FROM class_arms
+WHERE id = $1 AND tenant_id = $2
+`
+
+type GetClassArmByIDParams struct {
+	ID       pgtype.UUID `json:"id"`
+	TenantID pgtype.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetClassArmByID(ctx context.Context, arg GetClassArmByIDParams) (ClassArm, error) {
+	row := q.db.QueryRow(ctx, getClassArmByID, arg.ID, arg.TenantID)
+	var i ClassArm
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.ClassID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getClassByID = `-- name: GetClassByID :one
 SELECT id, tenant_id, name, level_order, created_at, updated_at FROM classes
 WHERE id = $1 AND tenant_id = $2
