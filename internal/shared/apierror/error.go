@@ -45,6 +45,13 @@ func Wrap(err error, code, message string, status int, details any) *AppError {
 	}
 }
 
+const (
+	CheckViolation      = "check_violation"
+	UniqueViolation     = "unique_violation"
+	ForeignKeyViolation = "foreign_key_violation"
+	NotNullViolation    = "not_null_violation"
+)
+
 var (
 	ErrNotFound = New("not_found", "resource not found", http.StatusNotFound, nil, nil)
 

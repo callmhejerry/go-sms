@@ -65,6 +65,28 @@ type ClassArm struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type FeeStructure struct {
+	ID                uuid.UUID          `json:"id"`
+	TenantID          uuid.UUID          `json:"tenant_id"`
+	FeeTypeID         uuid.UUID          `json:"fee_type_id"`
+	AcademicSessionID uuid.UUID          `json:"academic_session_id"`
+	ClassID           *uuid.UUID         `json:"class_id"`
+	AmountKobo        int64              `json:"amount_kobo"`
+	DueDate           *time.Time         `json:"due_date"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FeeType struct {
+	ID          uuid.UUID          `json:"id"`
+	TenantID    uuid.UUID          `json:"tenant_id"`
+	Name        string             `json:"name"`
+	Description *string            `json:"description"`
+	IsOptional  bool               `json:"is_optional"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Parent struct {
 	ID          uuid.UUID          `json:"id"`
 	TenantID    uuid.UUID          `json:"tenant_id"`
