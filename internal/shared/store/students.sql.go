@@ -13,6 +13,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countListStudentsPage = `-- name: CountListStudentsPage :one
+SELECT COUNT(*) FROM students
+WHERE tenant_id = $1
+ORDER BY last_name, first_name, id
+`
+
+func (q *Queries) CountListStudentsPage(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countListStudentsPage, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSearchStudents = `-- name: CountSearchStudents :one
 SELECT COUNT(*) FROM students
 WHERE tenant_id = $1

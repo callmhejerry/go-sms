@@ -159,7 +159,11 @@ func (service *Service) GetStudent(ctx context.Context, tenantId, studentId uuid
 	return &student, nil
 }
 
-func (service *Service) ListStudentsPage(ctx context.Context, tenantId uuid.UUID, offset, limit int) ([]store.Student, error) {
+func (service *Service) ListStudentsPage(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	offset, limit int,
+) (*ListStudentOffsetResponse, error) {
 
 	students, err := service.queries.ListStudentsPage(ctx, store.ListStudentsPageParams{
 		TenantID: tenantId,
@@ -170,7 +174,18 @@ func (service *Service) ListStudentsPage(ctx context.Context, tenantId uuid.UUID
 		return nil, academic.TranslateAcademicError(err)
 	}
 
-	return students, nil
+	total, err := service.queries.CountListStudentsPage(ctx, tenantId)
+	totalPages := (total + int64(limit) - 1) / int64(limit)
+
+	return &ListStudentOffsetResponse{
+		Data: students,
+		Pagination: utils.OffsetPaginationResponse{
+			Page:       offset,
+			PageSize:   limit,
+			Total:      int(total),
+			TotalPages: int(totalPages),
+		},
+	}, nil
 }
 
 func (service *Service) GetStudentParents(ctx context.Context, tenantId, studentId uuid.UUID) ([]store.GetParentsByStudentRow, error) {

@@ -19,6 +19,13 @@ ORDER BY last_name, first_name, id
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
 
+
+-- name: CountListStudentsPage :one
+SELECT COUNT(*) FROM students
+WHERE tenant_id = $1
+ORDER BY last_name, first_name, id;
+
+
 -- name: ListStudentsCursor :many
 SELECT * FROM students
 WHERE tenant_id = $1

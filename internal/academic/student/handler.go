@@ -89,7 +89,12 @@ func (handler *Handler) ListStudentsPage(w http.ResponseWriter, r *http.Request)
 
 	offsetRequest := utils.ParseOffsetPagination(r)
 
-	students, err := handler.service.ListStudentsPage(r.Context(), claims.TenantID, offsetRequest.Page, offsetRequest.PageSize)
+	students, err := handler.service.ListStudentsPage(
+		r.Context(),
+		claims.TenantID,
+		offsetRequest.Page,
+		offsetRequest.PageSize,
+	)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)

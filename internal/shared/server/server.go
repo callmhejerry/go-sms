@@ -84,6 +84,7 @@ func New(
 	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Student.GetStudentParents)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}/profile", handlers.Student.GetStudentProfile)
 	protectedMux.HandleFunc("GET /api/v1/students/search-page", handlers.Student.SearchStudentsPage)
+	protectedMux.HandleFunc("GET /api/v1/students/search-cursor", handlers.Student.SearchStudentsCursor)
 	protectedMux.HandleFunc("PATCH /api/v1/students/{id}", handlers.Student.UpdateStudent)
 
 	// ADMISSIONS ROUTE
