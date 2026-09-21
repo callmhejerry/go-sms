@@ -67,3 +67,41 @@ WHERE id = $1 AND tenant_id = $2;
 -- name: ListUnpaidStudentFees :many
 SELECT * FROM student_fees
 WHERE tenant_id = $1 AND student_id = $2 AND status != 'paid';
+
+
+
+-- name: CreatePayment :one
+INSERT INTO payments (
+    tenant_id, student_id, amount_kobo,
+    payment_method, reference, received_by, notes
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING *;
+
+
+-- name: CreatePaymentAllocation :one
+INSERT INTO payment_allocations(
+    payment_id, student_fee_id, amount_kobo
+)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+
+-- name: UpdateStudentFeePayment :one
+UPDATE student_fees
+SET 
+    amount_paid_kobo = amount_paid_kobo + $3,
+    status = CASE
+        WHEN amount_paid_kobo + $3 >= amount_kobo THEN 'paid'
+        WHEN amount_paid_kobo + $3 > 0 THEN 'partial'
+        ELSE 'unpaid'
+    END,
+    updated_at = NOW()
+WHERE id = $1 AND tenant_id = $2
+RETURNING *;
+
+
+-- name: ListPaymentsByStudent :many
+SELECT * FROM payments
+WHERE tenant_id = $1 AND student_id = $2
+ORDER BY paid_at DESC;

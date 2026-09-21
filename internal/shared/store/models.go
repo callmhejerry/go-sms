@@ -99,6 +99,26 @@ type Parent struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Payment struct {
+	ID            uuid.UUID          `json:"id"`
+	TenantID      uuid.UUID          `json:"tenant_id"`
+	StudentID     uuid.UUID          `json:"student_id"`
+	AmountKobo    int64              `json:"amount_kobo"`
+	PaymentMethod string             `json:"payment_method"`
+	Reference     *string            `json:"reference"`
+	ReceivedBy    *uuid.UUID         `json:"received_by"`
+	PaidAt        pgtype.Timestamptz `json:"paid_at"`
+	Notes         *string            `json:"notes"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type PaymentAllocation struct {
+	ID           uuid.UUID `json:"id"`
+	PaymentID    uuid.UUID `json:"payment_id"`
+	StudentFeeID uuid.UUID `json:"student_fee_id"`
+	AmountKobo   int64     `json:"amount_kobo"`
+}
+
 type Role struct {
 	ID          uuid.UUID          `json:"id"`
 	TenantID    uuid.UUID          `json:"tenant_id"`

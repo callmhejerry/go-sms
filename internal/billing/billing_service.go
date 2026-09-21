@@ -128,3 +128,23 @@ func (service *BillingService) ListStudentFees(
 ) ([]store.ListStudentFeesRow, *apierror.AppError) {
 	return service.billingRepository.ListStudentFees(ctx, tenantId, studentId)
 }
+
+func (service *BillingService) RecordPayments(
+	ctx context.Context,
+	tenantId, receivedBy uuid.UUID,
+	request RecordPaymentRequest,
+) (*store.Payment, *apierror.AppError) {
+	return service.billingRepository.RecordPayment(
+		ctx, tenantId, receivedBy,
+		request,
+	)
+}
+
+func (service *BillingService) ListStudentPayments(
+	ctx context.Context, tenantId, studentId uuid.UUID,
+) ([]store.Payment, *apierror.AppError) {
+	return service.billingRepository.ListStudentPayments(
+		ctx, tenantId,
+		studentId,
+	)
+}

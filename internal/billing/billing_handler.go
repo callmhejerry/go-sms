@@ -144,3 +144,58 @@ func (h *BillingHandler) ListFeeStructures(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(feeStructures)
 }
+
+func (h *BillingHandler) AssignFeesToStudent(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	var request AssignFeesToStudentRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		apierror.WriteError(w, apierror.Validation("Invalid request body"), h.logger)
+		return
+	}
+
+	if err := h.validator.ValidateStruct(request); err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	studentFees, err := h.billingService.AssignFeesToStudent(r.Context(), claims.TenantID, request)
+
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	json.NewEncoder(w).Encode(studentFees)
+}
+
+func (h *BillingHandler) ListStudentFees(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	studentID, err := uuid.Parse(r.PathValue("student_id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid student id"), h.logger)
+		return
+	}
+
+	fees, err := h.billingService.ListStudentFees(r.Context(), claims.TenantID, studentID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(fees)
+}

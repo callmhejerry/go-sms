@@ -28,6 +28,19 @@ var (
 	ErrStudentFeeAmountLessThanZero = apierror.New("fee_amount_less_than_zero", "Fee amount must be greater than zero", http.StatusBadRequest, nil, nil)
 
 	ErrStudentFeeNotFound = apierror.NotFound("Student fee not found")
+
+	ErrPaymentNotFound = apierror.NotFound("Payment with id not found")
+
+	ErrPaymentAmountLessThanZero = apierror.New("payment_amount_less_than_zero", "Payment amount must be greater than zero", http.StatusBadRequest, nil, nil)
+
+	ErrPaymentAllocationAlreadyExist = apierror.New(
+		"payment_allocation_already_exist", "Payment allocation for this payment already exist",
+		http.StatusConflict, nil, nil,
+	)
+
+	ErrPaymentAllocationNotFound = apierror.NotFound("Payment allocation not found")
+
+	ErrPaymentAllocationLessThanZero = apierror.New("payment_allocation_less_than_zero", "Payment allocation must be greater than zero", http.StatusBadRequest, nil, nil)
 )
 
 func translateFeeTypeError(err error) *apierror.AppError {
@@ -102,6 +115,63 @@ func translateStudentFeesError(err error) *apierror.AppError {
 				return ErrFeeStructuresNotFound
 			case "fee_type_id":
 				return ErrFeeTypeNotFound
+			}
+		}
+	}
+	return apierror.Internal(err, "Something went wrong")
+}
+
+func translatePaymentsError(err error) *apierror.AppError {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrPaymentNotFound
+	}
+
+	var pgErr pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case apierror.CheckViolation:
+			return ErrPaymentAmountLessThanZero
+		case apierror.ForeignKeyViolation:
+			switch pgErr.ColumnName {
+			case "student_id":
+				return student.ErrStudentNotFound
+			case "received_by":
+				return apierror.NotFound("received_by user not found")
+			}
+		}
+	}
+	return apierror.ErrInternal
+}
+
+func translatePaymentAllocationError(err error) *apierror.AppError {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrPaymentAllocationNotFound
+	}
+
+	var pgErr pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case apierror.CheckViolation:
+			return ErrPaymentAllocationLessThanZero
+		case apierror.ForeignKeyViolation:
+			switch pgErr.ColumnName {
+			case "payment_id":
+				return ErrPaymentNotFound
+			case "student_fee_id":
+				return ErrStudentFeeNotFound
+			}
+		case apierror.UniqueViolation:
+			switch pgErr.ConstraintName {
+			case "payment_allocation_unique":
+				return ErrPaymentAllocationAlreadyExist
 			}
 		}
 	}

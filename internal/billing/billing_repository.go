@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
+	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BillingRepository interface {
@@ -49,10 +51,22 @@ type BillingRepository interface {
 		ctx context.Context,
 		tenantId, studentId uuid.UUID,
 	) ([]store.ListStudentFeesRow, *apierror.AppError)
+
+	RecordPayment(
+		ctx context.Context,
+		tenantId, receivedBy uuid.UUID,
+		request RecordPaymentRequest,
+	) (*store.Payment, *apierror.AppError)
+
+	ListStudentPayments(
+		ctx context.Context,
+		tenantId, studentId uuid.UUID,
+	) ([]store.Payment, *apierror.AppError)
 }
 
 type BillingRepositoryImpl struct {
 	queries *store.Queries
+	pool    *pgxpool.Pool
 }
 
 func NewBillingRepositoryImpl(queries *store.Queries) *BillingRepositoryImpl {
@@ -198,4 +212,82 @@ func (repo *BillingRepositoryImpl) ListStudentFees(
 		return nil, translateStudentFeesError(err)
 	}
 	return studentFees, nil
+}
+
+func (repo *BillingRepositoryImpl) RecordPayment(
+	ctx context.Context,
+	tenantId, receivedBy uuid.UUID,
+	request RecordPaymentRequest,
+) (*store.Payment, *apierror.AppError) {
+	//TODO : YOU MIGHT NEED TO COME BACK TO THIS
+	if request.PaymentMethod == "" {
+		request.PaymentMethod = "cash"
+	}
+
+	var payment store.Payment
+
+	err := database.WithTx(ctx, repo.pool, func(queries *store.Queries) error {
+		p, err := queries.CreatePayment(ctx, store.CreatePaymentParams{
+			TenantID:      tenantId,
+			StudentID:     request.StudentID,
+			AmountKobo:    int64(request.AmountInKobo),
+			PaymentMethod: request.PaymentMethod,
+			Reference:     request.Reference,
+			ReceivedBy:    &receivedBy,
+			Notes:         request.Notes,
+		})
+
+		if err != nil {
+			return translatePaymentsError(err)
+		}
+		payment = p
+
+		for _, allocation := range request.Allocations {
+			_, err := queries.CreatePaymentAllocation(ctx, store.CreatePaymentAllocationParams{
+				PaymentID:    p.ID,
+				StudentFeeID: allocation.StudentFeeID,
+				AmountKobo:   int64(allocation.AmountInKobo),
+			})
+			if err != nil {
+				return translatePaymentAllocationError(err)
+			}
+
+			_, err = queries.UpdateStudentFeePayment(
+				ctx, store.UpdateStudentFeePaymentParams{
+					ID:             allocation.StudentFeeID,
+					TenantID:       tenantId,
+					AmountPaidKobo: int64(allocation.AmountInKobo),
+				},
+			)
+			if err != nil {
+				return translateStudentFeesError(err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		var apierr apierror.AppError
+		if errors.As(err, &apierr) {
+			return nil, &apierr
+		}
+		return nil, apierror.ErrInternal
+	}
+	return &payment, nil
+}
+
+func (repo *BillingRepositoryImpl) ListStudentPayments(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) ([]store.Payment, *apierror.AppError) {
+	payments, err := repo.queries.ListPaymentsByStudent(ctx, store.ListPaymentsByStudentParams{
+		TenantID:  tenantId,
+		StudentID: studentId,
+	})
+
+	if err != nil {
+		return nil, translatePaymentsError(err)
+	}
+	return payments, nil
 }

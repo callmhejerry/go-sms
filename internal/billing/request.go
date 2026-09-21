@@ -20,3 +20,17 @@ type AssignFeesToStudentRequest struct {
 	StudentID       uuid.UUID   `json:"student_id" validate:"required"`
 	FeeStructureIDs []uuid.UUID `json:"fee_structure_ids" validate:"required,min=1"`
 }
+
+type RecordPaymentRequest struct {
+	StudentID     uuid.UUID                  `json:"student_id" validate:"required,uuid"`
+	AmountInKobo  int                        `json:"amount" validate:"required,min=1"`
+	PaymentMethod string                     `json:"payment_method"`
+	Reference     *string                    `json:"reference"`
+	Notes         *string                    `json:"notes"`
+	Allocations   []PaymentAllocationRequest `json:"allocations" validate:"required,min=1"`
+}
+
+type PaymentAllocationRequest struct {
+	StudentFeeID uuid.UUID `json:"student_fee_id" validate:"required"`
+	AmountInKobo int       `json:"amount" validate:"required"`
+}

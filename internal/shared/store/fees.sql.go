@@ -91,6 +91,77 @@ func (q *Queries) CreateFeeType(ctx context.Context, arg CreateFeeTypeParams) (F
 	return i, err
 }
 
+const createPayment = `-- name: CreatePayment :one
+INSERT INTO payments (
+    tenant_id, student_id, amount_kobo,
+    payment_method, reference, received_by, notes
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, tenant_id, student_id, amount_kobo, payment_method, reference, received_by, paid_at, notes, created_at
+`
+
+type CreatePaymentParams struct {
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	StudentID     uuid.UUID  `json:"student_id"`
+	AmountKobo    int64      `json:"amount_kobo"`
+	PaymentMethod string     `json:"payment_method"`
+	Reference     *string    `json:"reference"`
+	ReceivedBy    *uuid.UUID `json:"received_by"`
+	Notes         *string    `json:"notes"`
+}
+
+func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error) {
+	row := q.db.QueryRow(ctx, createPayment,
+		arg.TenantID,
+		arg.StudentID,
+		arg.AmountKobo,
+		arg.PaymentMethod,
+		arg.Reference,
+		arg.ReceivedBy,
+		arg.Notes,
+	)
+	var i Payment
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.StudentID,
+		&i.AmountKobo,
+		&i.PaymentMethod,
+		&i.Reference,
+		&i.ReceivedBy,
+		&i.PaidAt,
+		&i.Notes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createPaymentAllocation = `-- name: CreatePaymentAllocation :one
+INSERT INTO payment_allocations(
+    payment_id, student_fee_id, amount_kobo
+)
+VALUES ($1, $2, $3)
+RETURNING id, payment_id, student_fee_id, amount_kobo
+`
+
+type CreatePaymentAllocationParams struct {
+	PaymentID    uuid.UUID `json:"payment_id"`
+	StudentFeeID uuid.UUID `json:"student_fee_id"`
+	AmountKobo   int64     `json:"amount_kobo"`
+}
+
+func (q *Queries) CreatePaymentAllocation(ctx context.Context, arg CreatePaymentAllocationParams) (PaymentAllocation, error) {
+	row := q.db.QueryRow(ctx, createPaymentAllocation, arg.PaymentID, arg.StudentFeeID, arg.AmountKobo)
+	var i PaymentAllocation
+	err := row.Scan(
+		&i.ID,
+		&i.PaymentID,
+		&i.StudentFeeID,
+		&i.AmountKobo,
+	)
+	return i, err
+}
+
 const createStudentFee = `-- name: CreateStudentFee :one
 INSERT INTO student_fees (
     tenant_id, student_id, fee_structure_id,
@@ -330,6 +401,48 @@ func (q *Queries) ListFeeTypes(ctx context.Context, tenantID uuid.UUID) ([]FeeTy
 	return items, nil
 }
 
+const listPaymentsByStudent = `-- name: ListPaymentsByStudent :many
+SELECT id, tenant_id, student_id, amount_kobo, payment_method, reference, received_by, paid_at, notes, created_at FROM payments
+WHERE tenant_id = $1 AND student_id = $2
+ORDER BY paid_at DESC
+`
+
+type ListPaymentsByStudentParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	StudentID uuid.UUID `json:"student_id"`
+}
+
+func (q *Queries) ListPaymentsByStudent(ctx context.Context, arg ListPaymentsByStudentParams) ([]Payment, error) {
+	rows, err := q.db.Query(ctx, listPaymentsByStudent, arg.TenantID, arg.StudentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Payment{}
+	for rows.Next() {
+		var i Payment
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.StudentID,
+			&i.AmountKobo,
+			&i.PaymentMethod,
+			&i.Reference,
+			&i.ReceivedBy,
+			&i.PaidAt,
+			&i.Notes,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStudentFees = `-- name: ListStudentFees :many
 SELECT sf.id, sf.tenant_id, sf.student_id, sf.fee_structure_id, sf.amount_kobo, sf.amount_paid_kobo, sf.status, sf.due_date, sf.created_at, sf.updated_at, ft.name AS fee_type_name
 FROM student_fees sf
@@ -429,4 +542,42 @@ func (q *Queries) ListUnpaidStudentFees(ctx context.Context, arg ListUnpaidStude
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateStudentFeePayment = `-- name: UpdateStudentFeePayment :one
+UPDATE student_fees
+SET 
+    amount_paid_kobo = amount_paid_kobo + $3,
+    status = CASE
+        WHEN amount_paid_kobo + $3 >= amount_kobo THEN 'paid'
+        WHEN amount_paid_kobo + $3 > 0 THEN 'partial'
+        ELSE 'unpaid'
+    END,
+    updated_at = NOW()
+WHERE id = $1 AND tenant_id = $2
+RETURNING id, tenant_id, student_id, fee_structure_id, amount_kobo, amount_paid_kobo, status, due_date, created_at, updated_at
+`
+
+type UpdateStudentFeePaymentParams struct {
+	ID             uuid.UUID `json:"id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
+	AmountPaidKobo int64     `json:"amount_paid_kobo"`
+}
+
+func (q *Queries) UpdateStudentFeePayment(ctx context.Context, arg UpdateStudentFeePaymentParams) (StudentFee, error) {
+	row := q.db.QueryRow(ctx, updateStudentFeePayment, arg.ID, arg.TenantID, arg.AmountPaidKobo)
+	var i StudentFee
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.StudentID,
+		&i.FeeStructureID,
+		&i.AmountKobo,
+		&i.AmountPaidKobo,
+		&i.Status,
+		&i.DueDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
