@@ -23,7 +23,7 @@ func WriteError(w http.ResponseWriter, err error, logger *slog.Logger) {
 	if errors.As(err, &appError) {
 
 		if appError.HTTPStatus == http.StatusInternalServerError && logger != nil {
-			logger.Error("internal server error", slog.String("error", appError.Message))
+			logger.Error("internal server error", slog.String("error", appError.Message), slog.Any("details", appError.Details))
 		}
 
 		writeJSON(w, appError.HTTPStatus, errorResponse{

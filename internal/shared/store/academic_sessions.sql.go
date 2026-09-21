@@ -7,8 +7,9 @@ package store
 
 import (
 	"context"
+	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createAcademicSession = `-- name: CreateAcademicSession :one
@@ -20,11 +21,11 @@ RETURNING id, tenant_id, name, start_date, end_date, is_current, created_at, upd
 `
 
 type CreateAcademicSessionParams struct {
-	TenantID  pgtype.UUID `json:"tenant_id"`
-	Name      string      `json:"name"`
-	StartDate pgtype.Date `json:"start_date"`
-	EndDate   pgtype.Date `json:"end_date"`
-	IsCurrent bool        `json:"is_current"`
+	TenantID  uuid.UUID `json:"tenant_id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+	IsCurrent bool      `json:"is_current"`
 }
 
 func (q *Queries) CreateAcademicSession(ctx context.Context, arg CreateAcademicSessionParams) (AcademicSession, error) {
@@ -55,8 +56,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetAcademicSessionByIdParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetAcademicSessionById(ctx context.Context, arg GetAcademicSessionByIdParams) (AcademicSession, error) {
@@ -80,7 +81,7 @@ SELECT id, tenant_id, name, start_date, end_date, is_current, created_at, update
 WHERE tenant_id = $1 AND is_current = true
 `
 
-func (q *Queries) GetCurrentAcademicSession(ctx context.Context, tenantID pgtype.UUID) (AcademicSession, error) {
+func (q *Queries) GetCurrentAcademicSession(ctx context.Context, tenantID uuid.UUID) (AcademicSession, error) {
 	row := q.db.QueryRow(ctx, getCurrentAcademicSession, tenantID)
 	var i AcademicSession
 	err := row.Scan(
@@ -102,7 +103,7 @@ WHERE tenant_id = $1
 ORDER BY start_date DESC
 `
 
-func (q *Queries) ListAcademicSessions(ctx context.Context, tenantID pgtype.UUID) ([]AcademicSession, error) {
+func (q *Queries) ListAcademicSessions(ctx context.Context, tenantID uuid.UUID) ([]AcademicSession, error) {
 	rows, err := q.db.Query(ctx, listAcademicSessions, tenantID)
 	if err != nil {
 		return nil, err
@@ -137,7 +138,7 @@ SET is_current = false, updated_at = NOW()
 WHERE tenant_id = $1 AND is_current = true
 `
 
-func (q *Queries) SetCurrentAcademicSession(ctx context.Context, tenantID pgtype.UUID) error {
+func (q *Queries) SetCurrentAcademicSession(ctx context.Context, tenantID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, setCurrentAcademicSession, tenantID)
 	return err
 }
@@ -155,12 +156,12 @@ RETURNING id, tenant_id, name, start_date, end_date, is_current, created_at, upd
 `
 
 type UpdateAcademicSessionParams struct {
-	ID        pgtype.UUID `json:"id"`
-	TenantID  pgtype.UUID `json:"tenant_id"`
-	Name      string      `json:"name"`
-	StartDate pgtype.Date `json:"start_date"`
-	EndDate   pgtype.Date `json:"end_date"`
-	IsCurrent bool        `json:"is_current"`
+	ID        uuid.UUID `json:"id"`
+	TenantID  uuid.UUID `json:"tenant_id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+	IsCurrent bool      `json:"is_current"`
 }
 
 func (q *Queries) UpdateAcademicSession(ctx context.Context, arg UpdateAcademicSessionParams) (AcademicSession, error) {

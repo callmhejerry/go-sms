@@ -7,8 +7,9 @@ package store
 
 import (
 	"context"
+	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createAdmission = `-- name: CreateAdmission :one
@@ -26,19 +27,19 @@ RETURNING id, tenant_id, academic_session_id, first_name, last_name, middle_name
 `
 
 type CreateAdmissionParams struct {
-	TenantID           pgtype.UUID `json:"tenant_id"`
-	AcademicSessionID  pgtype.UUID `json:"academic_session_id"`
-	FirstName          string      `json:"first_name"`
-	LastName           string      `json:"last_name"`
-	MiddleName         *string     `json:"middle_name"`
-	Gender             string      `json:"gender"`
-	DateOfBirth        pgtype.Date `json:"date_of_birth"`
-	PreferredClassID   pgtype.UUID `json:"preferred_class_id"`
-	ParentFirstName    string      `json:"parent_first_name"`
-	ParentLastName     string      `json:"parent_last_name"`
-	ParentPhoneNumber  string      `json:"parent_phone_number"`
-	ParentEmail        string      `json:"parent_email"`
-	ParentRelationship string      `json:"parent_relationship"`
+	TenantID           uuid.UUID  `json:"tenant_id"`
+	AcademicSessionID  uuid.UUID  `json:"academic_session_id"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	MiddleName         *string    `json:"middle_name"`
+	Gender             string     `json:"gender"`
+	DateOfBirth        time.Time  `json:"date_of_birth"`
+	PreferredClassID   *uuid.UUID `json:"preferred_class_id"`
+	ParentFirstName    string     `json:"parent_first_name"`
+	ParentLastName     string     `json:"parent_last_name"`
+	ParentPhoneNumber  string     `json:"parent_phone_number"`
+	ParentEmail        string     `json:"parent_email"`
+	ParentRelationship string     `json:"parent_relationship"`
 }
 
 func (q *Queries) CreateAdmission(ctx context.Context, arg CreateAdmissionParams) (Admission, error) {
@@ -91,8 +92,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetAdmissionByIdParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetAdmissionById(ctx context.Context, arg GetAdmissionByIdParams) (Admission, error) {
@@ -131,7 +132,7 @@ WHERE tenant_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListAdmissions(ctx context.Context, tenantID pgtype.UUID) ([]Admission, error) {
+func (q *Queries) ListAdmissions(ctx context.Context, tenantID uuid.UUID) ([]Admission, error) {
 	rows, err := q.db.Query(ctx, listAdmissions, tenantID)
 	if err != nil {
 		return nil, err
@@ -181,8 +182,8 @@ ORDER BY created_at DESC
 `
 
 type ListAdmissionsByStatusParams struct {
-	TenantID pgtype.UUID `json:"tenant_id"`
-	Status   string      `json:"status"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	Status   string    `json:"status"`
 }
 
 func (q *Queries) ListAdmissionsByStatus(ctx context.Context, arg ListAdmissionsByStatusParams) ([]Admission, error) {
@@ -243,13 +244,13 @@ RETURNING id, tenant_id, academic_session_id, first_name, last_name, middle_name
 `
 
 type UpdateAdmissionStatusParams struct {
-	ID              pgtype.UUID `json:"id"`
-	TenantID        pgtype.UUID `json:"tenant_id"`
-	Status          string      `json:"status"`
-	ReviewedBy      pgtype.UUID `json:"reviewed_by"`
-	RejectionReason *string     `json:"rejection_reason"`
-	AdmissionNumber *string     `json:"admission_number"`
-	StudentID       pgtype.UUID `json:"student_id"`
+	ID              uuid.UUID  `json:"id"`
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	Status          string     `json:"status"`
+	ReviewedBy      *uuid.UUID `json:"reviewed_by"`
+	RejectionReason *string    `json:"rejection_reason"`
+	AdmissionNumber *string    `json:"admission_number"`
+	StudentID       *uuid.UUID `json:"student_id"`
 }
 
 func (q *Queries) UpdateAdmissionStatus(ctx context.Context, arg UpdateAdmissionStatusParams) (Admission, error) {

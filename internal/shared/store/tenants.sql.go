@@ -8,7 +8,7 @@ package store
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createTenant = `-- name: CreateTenant :one
@@ -41,7 +41,7 @@ SELECT id, name, slug, status, created_at, updated_at FROM tenants
 WHERE id = $1
 `
 
-func (q *Queries) GetTenantById(ctx context.Context, id pgtype.UUID) (Tenant, error) {
+func (q *Queries) GetTenantById(ctx context.Context, id uuid.UUID) (Tenant, error) {
 	row := q.db.QueryRow(ctx, getTenantById, id)
 	var i Tenant
 	err := row.Scan(
@@ -114,8 +114,8 @@ RETURNING id, name, slug, status, created_at, updated_at
 `
 
 type UpdateTenantStatusParams struct {
-	ID     pgtype.UUID `json:"id"`
-	Status string      `json:"status"`
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status"`
 }
 
 func (q *Queries) UpdateTenantStatus(ctx context.Context, arg UpdateTenantStatusParams) (Tenant, error) {

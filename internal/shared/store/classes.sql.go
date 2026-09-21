@@ -8,6 +8,7 @@ package store
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -20,9 +21,9 @@ RETURNING id, tenant_id, name, level_order, created_at, updated_at
 `
 
 type CreateClassParams struct {
-	TenantID   pgtype.UUID `json:"tenant_id"`
-	Name       string      `json:"name"`
-	LevelOrder int32       `json:"level_order"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	Name       string    `json:"name"`
+	LevelOrder int32     `json:"level_order"`
 }
 
 func (q *Queries) CreateClass(ctx context.Context, arg CreateClassParams) (Class, error) {
@@ -48,9 +49,9 @@ RETURNING id, tenant_id, class_id, name, created_at, updated_at
 `
 
 type CreateClassArmParams struct {
-	TenantID pgtype.UUID `json:"tenant_id"`
-	ClassID  pgtype.UUID `json:"class_id"`
-	Name     string      `json:"name"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	ClassID  uuid.UUID `json:"class_id"`
+	Name     string    `json:"name"`
 }
 
 func (q *Queries) CreateClassArm(ctx context.Context, arg CreateClassArmParams) (ClassArm, error) {
@@ -73,8 +74,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetClassArmByIDParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetClassArmByID(ctx context.Context, arg GetClassArmByIDParams) (ClassArm, error) {
@@ -97,8 +98,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetClassByIDParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetClassByID(ctx context.Context, arg GetClassByIDParams) (Class, error) {
@@ -124,16 +125,16 @@ ORDER by c.level_order, ca.name
 `
 
 type ListAllClassArmsRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	TenantID  pgtype.UUID        `json:"tenant_id"`
-	ClassID   pgtype.UUID        `json:"class_id"`
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
+	ClassID   uuid.UUID          `json:"class_id"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	ClassName string             `json:"class_name"`
 }
 
-func (q *Queries) ListAllClassArms(ctx context.Context, tenantID pgtype.UUID) ([]ListAllClassArmsRow, error) {
+func (q *Queries) ListAllClassArms(ctx context.Context, tenantID uuid.UUID) ([]ListAllClassArmsRow, error) {
 	rows, err := q.db.Query(ctx, listAllClassArms, tenantID)
 	if err != nil {
 		return nil, err
@@ -168,8 +169,8 @@ ORDER BY name
 `
 
 type ListClassArmsParams struct {
-	TenantID pgtype.UUID `json:"tenant_id"`
-	ClassID  pgtype.UUID `json:"class_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	ClassID  uuid.UUID `json:"class_id"`
 }
 
 func (q *Queries) ListClassArms(ctx context.Context, arg ListClassArmsParams) ([]ClassArm, error) {
@@ -205,7 +206,7 @@ WHERE tenant_id = $1
 ORDER BY level_order, name
 `
 
-func (q *Queries) ListClasses(ctx context.Context, tenantID pgtype.UUID) ([]Class, error) {
+func (q *Queries) ListClasses(ctx context.Context, tenantID uuid.UUID) ([]Class, error) {
 	rows, err := q.db.Query(ctx, listClasses, tenantID)
 	if err != nil {
 		return nil, err

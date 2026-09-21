@@ -50,7 +50,7 @@ INNER JOIN student_parents sp ON sp.student_id = s.id
 WHERE sp.parent_id = $1 AND s.tenant_id = $2;
 
 
--- name: GetStudentById :one
+-- name: GetStudentProfile :one
 SELECT s.*, 
     c.name as class_name,
     ca.name as class_arm_name,
@@ -66,26 +66,26 @@ WHERE s.id = $1 AND s.tenant_id = $2;
 SELECT * FROM students
 WHERE tenant_id = $1
     AND (
-        $2::text IS NULL OR
-        first_name ILIKE '%' || $2 || '%' OR 
-        last_name ILIKE '%' || $2 || '%' OR
-        admission_number ILIKE '%' || $2 || '%'
+        sqlc.narg('search')::text IS NULL OR
+        first_name ILIKE '%' || sqlc.narg('search') || '%' OR 
+        last_name ILIKE '%' || sqlc.narg('search') || '%' OR
+        admission_number ILIKE '%' || sqlc.narg('search') || '%'
     )
-    AND ($3::uuid IS NULL OR current_class_arm_id = $3)
-    AND ($4::text IS NULL OR status = $4)
+    AND (sqlc.narg('current_class_arm')::uuid IS NULL OR current_class_arm_id = sqlc.narg('current_class_arm'))
+    AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
 ORDER BY last_name, first_name;
 
 
 -- name: UpdateStudent :one
 UPDATE students
 SET 
-    first_name = COALESCE($3, first_name),
-    last_name = COALESCE($4, last_name),
-    middle_name = COALESCE($5, middle_name),
-    gender = COALESCE($6, gender),
-    date_of_birth = COALESCE($7, date_of_birth),
-    current_class_arm_id = COALESCE($8, current_class_arm_id),
-    status = COALESCE($9, status),
+    first_name = COALESCE(sqlc.narg('first_name'), first_name),
+    last_name = COALESCE(sqlc.narg('last_name'), last_name),
+    middle_name = COALESCE(sqlc.narg('middle_name'), middle_name),
+    gender = COALESCE(sqlc.narg('gender'), gender),
+    date_of_birth = COALESCE(sqlc.narg('date_of_birth'), date_of_birth),
+    current_class_arm_id = COALESCE(sqlc.narg('current_class_arm_id'), current_class_arm_id),
+    status = COALESCE(sqlc.narg('status'), status),
     updated_at = NOW()
 WHERE id = $1 AND tenant_id = $2
 RETURNING *;

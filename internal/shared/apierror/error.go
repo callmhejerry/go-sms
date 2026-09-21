@@ -10,6 +10,7 @@ type AppError struct {
 	Message    string `json:"message"`
 	HTTPStatus int    `json:"-"`
 	Err        error  `json:"-"`
+	Details    any    `json:"details"`
 }
 
 func (e *AppError) Error() string {
@@ -24,50 +25,53 @@ func (e *AppError) Unwrap() error {
 }
 
 // Helper constructors
-func New(code, message string, status int) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		HTTPStatus: status,
-	}
-}
-
-func Wrap(err error, code, message string, status int) *AppError {
+func New(code, message string, status int, err error, details any) *AppError {
 	return &AppError{
 		Code:       code,
 		Message:    message,
 		HTTPStatus: status,
 		Err:        err,
+		Details:    details,
+	}
+}
+
+func Wrap(err error, code, message string, status int, details any) *AppError {
+	return &AppError{
+		Code:       code,
+		Message:    message,
+		HTTPStatus: status,
+		Err:        err,
+		Details:    details,
 	}
 }
 
 var (
-	ErrNotFound = New("not_found", "resource not found", http.StatusNotFound)
+	ErrNotFound = New("not_found", "resource not found", http.StatusNotFound, nil, nil)
 
-	ErrConflict = New("conflict", "resource already exists", http.StatusConflict)
+	ErrConflict = New("conflict", "resource already exists", http.StatusConflict, nil, nil)
 
-	ErrValidation = New("validation_error", "validation failed", http.StatusBadRequest)
+	ErrValidation = New("validation_error", "validation failed", http.StatusBadRequest, nil, nil)
 
-	ErrUnauthorized = New("unauthorized", "authentication required", http.StatusUnauthorized)
+	ErrUnauthorized = New("unauthorized", "authentication required", http.StatusUnauthorized, nil, nil)
 
-	ErrForbidden = New("forbidden", "you do not have permission to perform this action", http.StatusForbidden)
+	ErrForbidden = New("forbidden", "you do not have permission to perform this action", http.StatusForbidden, nil, nil)
 
-	ErrInternal = New("internal_error", "internal server error", http.StatusInternalServerError)
+	ErrInternal = New("internal_error", "internal server error", http.StatusInternalServerError, nil, nil)
 )
 
 // Convenience helpers
 func NotFound(message string) *AppError {
-	return New("not_found", message, http.StatusNotFound)
+	return New("not_found", message, http.StatusNotFound, nil, nil)
 }
 
 func Conflict(message string) *AppError {
-	return New("conflict", message, http.StatusConflict)
+	return New("conflict", message, http.StatusConflict, nil, nil)
 }
 
 func Validation(message string) *AppError {
-	return New("validation_error", message, http.StatusBadRequest)
+	return New("validation_error", message, http.StatusBadRequest, nil, nil)
 }
 
 func Internal(err error, message string) *AppError {
-	return Wrap(err, "internal_error", message, http.StatusInternalServerError)
+	return Wrap(err, "internal_error", message, http.StatusInternalServerError, nil)
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Service struct {
@@ -63,21 +62,21 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 		return nil, err
 	}
 
-	preferredClass, err := service.classService.GetClassById(ctx, tenantId, request.PreferredClassID)
+	_, err = service.classService.GetClassById(ctx, tenantId, request.PreferredClassID)
 
 	if err != nil {
 		return nil, err
 	}
 
 	admission, err := service.queries.CreateAdmission(ctx, store.CreateAdmissionParams{
-		TenantID:           pgtype.UUID{Bytes: tenantId, Valid: true},
+		TenantID:           tenantId,
 		AcademicSessionID:  academicSession.ID,
 		FirstName:          firstName,
 		LastName:           lastName,
 		MiddleName:         request.MiddleName,
 		Gender:             gender,
-		DateOfBirth:        pgtype.Date{Time: dateOfBirth, Valid: true},
-		PreferredClassID:   preferredClass.ID,
+		DateOfBirth:        dateOfBirth,
+		PreferredClassID:   &request.PreferredClassID,
 		ParentFirstName:    parentFirstName,
 		ParentLastName:     parentLastName,
 		ParentPhoneNumber:  parentPhone,
@@ -93,7 +92,7 @@ func (service *Service) CreateAdmission(ctx context.Context, tenantId uuid.UUID,
 }
 
 func (service *Service) ListAdmissions(ctx context.Context, tenantId uuid.UUID) ([]store.Admission, error) {
-	admissions, err := service.queries.ListAdmissions(ctx, pgtype.UUID{Bytes: tenantId, Valid: true})
+	admissions, err := service.queries.ListAdmissions(ctx, tenantId)
 
 	if err != nil {
 		return nil, database.TranslateError(err)
@@ -104,8 +103,8 @@ func (service *Service) ListAdmissions(ctx context.Context, tenantId uuid.UUID) 
 func (service *Service) AcceptAdmission(ctx context.Context, tenantId, admissionId, reviewedBy uuid.UUID, classArmId *uuid.UUID) (*store.Admission, *store.Student, error) {
 
 	admission, err := service.queries.GetAdmissionById(ctx, store.GetAdmissionByIdParams{
-		ID:       pgtype.UUID{Bytes: admissionId, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+		ID:       admissionId,
+		TenantID: tenantId,
 	})
 	if err != nil {
 		return nil, nil, database.TranslateError(err)
@@ -122,9 +121,9 @@ func (service *Service) AcceptAdmission(ctx context.Context, tenantId, admission
 		LastName:         admission.LastName,
 		MiddleName:       admission.MiddleName,
 		Gender:           admission.Gender,
-		DateOfBirth:      admission.DateOfBirth.Time.Format("2026-01-30"),
+		DateOfBirth:      admission.DateOfBirth.Format("2026-01-30"),
 		CurrentClassArm:  classArmId,
-		AdmissionSession: (*uuid.UUID)(&admission.AcademicSessionID.Bytes),
+		AdmissionSession: &admissionId,
 	})
 
 	if err != nil {
@@ -133,11 +132,11 @@ func (service *Service) AcceptAdmission(ctx context.Context, tenantId, admission
 
 	updatedAdmission, err := service.queries.UpdateAdmissionStatus(ctx, store.UpdateAdmissionStatusParams{
 		ID:              admission.ID,
-		TenantID:        pgtype.UUID{Bytes: tenantId, Valid: true},
+		TenantID:        tenantId,
 		Status:          string(constants.AdmissionAccepted),
-		ReviewedBy:      pgtype.UUID{Bytes: reviewedBy, Valid: true},
+		ReviewedBy:      &reviewedBy,
 		AdmissionNumber: &admissionNumber,
-		StudentID:       student.ID,
+		StudentID:       &student.ID,
 	})
 
 	if err != nil {

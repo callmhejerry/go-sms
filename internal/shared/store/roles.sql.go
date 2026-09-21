@@ -8,7 +8,7 @@ package store
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const assignRoleToUser = `-- name: AssignRoleToUser :exec
@@ -20,8 +20,8 @@ ON CONFLICT DO NOTHING
 `
 
 type AssignRoleToUserParams struct {
-	UserID pgtype.UUID `json:"user_id"`
-	RoleID pgtype.UUID `json:"role_id"`
+	UserID uuid.UUID `json:"user_id"`
+	RoleID uuid.UUID `json:"role_id"`
 }
 
 func (q *Queries) AssignRoleToUser(ctx context.Context, arg AssignRoleToUserParams) error {
@@ -39,9 +39,9 @@ RETURNING id, tenant_id, name, description, created_at, updated_at
 `
 
 type CreateRoleParams struct {
-	TenantID    pgtype.UUID `json:"tenant_id"`
-	Name        string      `json:"name"`
-	Description *string     `json:"description"`
+	TenantID    uuid.UUID `json:"tenant_id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description"`
 }
 
 func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error) {
@@ -64,8 +64,8 @@ WHERE tenant_id = $1 AND name = $2
 `
 
 type GetRoleByNameParams struct {
-	TenantID pgtype.UUID `json:"tenant_id"`
-	Name     string      `json:"name"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	Name     string    `json:"name"`
 }
 
 func (q *Queries) GetRoleByName(ctx context.Context, arg GetRoleByNameParams) (Role, error) {
@@ -88,7 +88,7 @@ INNER JOIN user_roles ur ON ur.role_id = r.id
 WHERE ur.user_id = $1
 `
 
-func (q *Queries) GetUserRoles(ctx context.Context, userID pgtype.UUID) ([]Role, error) {
+func (q *Queries) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]Role, error) {
 	rows, err := q.db.Query(ctx, getUserRoles, userID)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ WHERE tenant_id = $1
 ORDER BY name
 `
 
-func (q *Queries) ListRolesByTenant(ctx context.Context, tenantID pgtype.UUID) ([]Role, error) {
+func (q *Queries) ListRolesByTenant(ctx context.Context, tenantID uuid.UUID) ([]Role, error) {
 	rows, err := q.db.Query(ctx, listRolesByTenant, tenantID)
 	if err != nil {
 		return nil, err
@@ -154,8 +154,8 @@ WHERE user_id = $1 AND role_id = $2
 `
 
 type RemoveRoleFromUserParams struct {
-	UserID pgtype.UUID `json:"user_id"`
-	RoleID pgtype.UUID `json:"role_id"`
+	UserID uuid.UUID `json:"user_id"`
+	RoleID uuid.UUID `json:"role_id"`
 }
 
 func (q *Queries) RemoveRoleFromUser(ctx context.Context, arg RemoveRoleFromUserParams) error {
@@ -173,8 +173,8 @@ AS has_role
 `
 
 type UserHasRoleParams struct {
-	UserID pgtype.UUID `json:"user_id"`
-	Name   string      `json:"name"`
+	UserID uuid.UUID `json:"user_id"`
+	Name   string    `json:"name"`
 }
 
 func (q *Queries) UserHasRole(ctx context.Context, arg UserHasRoleParams) (bool, error) {

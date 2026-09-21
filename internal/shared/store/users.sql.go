@@ -8,7 +8,7 @@ package store
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -20,11 +20,11 @@ RETURNING id, tenant_id, email, password_hash, first_name, last_name, is_active,
 `
 
 type CreateUserParams struct {
-	TenantID     pgtype.UUID `json:"tenant_id"`
-	Email        string      `json:"email"`
-	FirstName    string      `json:"first_name"`
-	LastName     string      `json:"last_name"`
-	PasswordHash string      `json:"password_hash"`
+	TenantID     uuid.UUID `json:"tenant_id"`
+	Email        string    `json:"email"`
+	FirstName    string    `json:"first_name"`
+	LastName     string    `json:"last_name"`
+	PasswordHash string    `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -56,8 +56,8 @@ WHERE email = $1 AND tenant_id = $2
 `
 
 type GetUserByEmailParams struct {
-	Email    string      `json:"email"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	Email    string    `json:"email"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error) {
@@ -83,8 +83,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetUserByIDParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, arg GetUserByIDParams) (User, error) {
@@ -110,7 +110,7 @@ WHERE tenant_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListUsersByTenant(ctx context.Context, tenantID pgtype.UUID) ([]User, error) {
+func (q *Queries) ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error) {
 	rows, err := q.db.Query(ctx, listUsersByTenant, tenantID)
 	if err != nil {
 		return nil, err

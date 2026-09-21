@@ -82,6 +82,9 @@ func New(
 	protectedMux.HandleFunc("GET /api/v1/students", handlers.Student.ListStudents)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}", handlers.Student.GetStudent)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Student.GetStudentParents)
+	protectedMux.HandleFunc("GET /api/v1/students/{id}/profile", handlers.Student.GetStudentProfile)
+	protectedMux.HandleFunc("GET /api/v1/students/search", handlers.Student.SearchStudents)
+	protectedMux.HandleFunc("PATCH /api/v1/students/{id}", handlers.Student.UpdateStudent)
 
 	// ADMISSIONS ROUTE
 	protectedMux.Handle("POST /api/v1/admissions", adminOnly(http.HandlerFunc(handlers.Admission.CreateAdmission)))

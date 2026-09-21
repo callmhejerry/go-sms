@@ -11,7 +11,6 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,7 +34,7 @@ func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, req
 	}
 
 	class, err := service.queries.CreateClass(ctx, store.CreateClassParams{
-		TenantID:   pgtype.UUID{Bytes: tenantId, Valid: true},
+		TenantID:   tenantId,
 		Name:       name,
 		LevelOrder: int32(request.LevelOrder),
 	})
@@ -47,8 +46,8 @@ func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, req
 
 func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid.UUID) (*store.Class, error) {
 	class, err := service.queries.GetClassByID(ctx, store.GetClassByIDParams{
-		ID:       pgtype.UUID{Bytes: classId, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+		ID:       classId,
+		TenantID: tenantId,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -61,7 +60,7 @@ func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid
 }
 
 func (service *Service) ListClasses(ctx context.Context, tenantId uuid.UUID) ([]store.Class, error) {
-	classes, err := service.queries.ListClasses(ctx, pgtype.UUID{Bytes: tenantId, Valid: true})
+	classes, err := service.queries.ListClasses(ctx, tenantId)
 
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
@@ -77,8 +76,8 @@ func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, 
 	}
 
 	class, err := service.queries.GetClassByID(ctx, store.GetClassByIDParams{
-		ID:       pgtype.UUID{Bytes: request.ClassID, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+		ID:       request.ClassID,
+		TenantID: tenantId,
 	})
 
 	if err != nil {
@@ -86,7 +85,7 @@ func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, 
 	}
 
 	classArm, err := service.queries.CreateClassArm(ctx, store.CreateClassArmParams{
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+		TenantID: tenantId,
 		ClassID:  class.ID,
 		Name:     name,
 	})
@@ -99,8 +98,8 @@ func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, 
 
 func (service *Service) ListClassArms(ctx context.Context, tenantId uuid.UUID, classId uuid.UUID) ([]store.ClassArm, error) {
 	classArms, err := service.queries.ListClassArms(ctx, store.ListClassArmsParams{
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
-		ClassID:  pgtype.UUID{Bytes: classId, Valid: true},
+		TenantID: tenantId,
+		ClassID:  classId,
 	})
 
 	if err != nil {

@@ -15,7 +15,6 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -45,13 +44,13 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 	var newStudent store.Student
 
 	err := database.WithTx(ctx, service.pool, func(q *store.Queries) error {
-		var classArmId pgtype.UUID
-		var academicSessionId pgtype.UUID
+		var classArmId uuid.UUID
+		var academicSessionId uuid.UUID
 
 		if request.CurrentClassArm != nil {
 			classArm, err := q.GetClassArmByID(ctx, store.GetClassArmByIDParams{
-				ID:       pgtype.UUID{Bytes: *request.CurrentClassArm, Valid: true},
-				TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+				ID:       *request.CurrentClassArm,
+				TenantID: tenantId,
 			})
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
@@ -65,8 +64,8 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 
 		if request.AdmissionSession != nil {
 			academicSession, err := q.GetAcademicSessionById(ctx, store.GetAcademicSessionByIdParams{
-				ID:       pgtype.UUID{Bytes: *request.AdmissionSession, Valid: true},
-				TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+				ID:       *request.AdmissionSession,
+				TenantID: tenantId,
 			})
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
@@ -79,16 +78,16 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 		}
 
 		student, err := q.CreateStudent(ctx, store.CreateStudentParams{
-			TenantID:           pgtype.UUID{Bytes: tenantId, Valid: true},
+			TenantID:           tenantId,
 			AdmissionNumber:    admissionNumber,
 			FirstName:          firstName,
 			LastName:           lastName,
 			MiddleName:         request.MiddleName,
 			Gender:             gender,
-			DateOfBirth:        pgtype.Date{Time: dateOfBirth, Valid: true},
+			DateOfBirth:        dateOfBirth,
 			Status:             string(constants.Active),
-			CurrentClassArmID:  classArmId,
-			AdmissionSessionID: academicSessionId,
+			CurrentClassArmID:  &classArmId,
+			AdmissionSessionID: &academicSessionId,
 		})
 
 		if err != nil {
@@ -114,7 +113,7 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 			}
 
 			parent, err := q.CreateParent(ctx, store.CreateParentParams{
-				TenantID:    pgtype.UUID{Bytes: tenantId, Valid: true},
+				TenantID:    tenantId,
 				FirstName:   firstName,
 				LastName:    lastName,
 				Email:       &parentEmail,
@@ -148,8 +147,8 @@ func (service *Service) CreateStudent(ctx context.Context, tenantId uuid.UUID, r
 
 func (service *Service) GetStudent(ctx context.Context, tenantId, studentId uuid.UUID) (*store.Student, error) {
 	student, err := service.queries.GetStudentByID(ctx, store.GetStudentByIDParams{
-		ID:       pgtype.UUID{Bytes: studentId, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+		ID:       studentId,
+		TenantID: tenantId,
 	})
 
 	if err != nil {
@@ -160,10 +159,7 @@ func (service *Service) GetStudent(ctx context.Context, tenantId, studentId uuid
 }
 
 func (service *Service) ListStudents(ctx context.Context, tenantId uuid.UUID) ([]store.Student, error) {
-	students, err := service.queries.ListStudents(ctx, pgtype.UUID{
-		Bytes: tenantId,
-		Valid: true,
-	})
+	students, err := service.queries.ListStudents(ctx, tenantId)
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
 	}
@@ -173,12 +169,74 @@ func (service *Service) ListStudents(ctx context.Context, tenantId uuid.UUID) ([
 
 func (service *Service) GetStudentParents(ctx context.Context, tenantId, studentId uuid.UUID) ([]store.GetParentsByStudentRow, error) {
 	parents, err := service.queries.GetParentsByStudent(ctx, store.GetParentsByStudentParams{
-		StudentID: pgtype.UUID{Bytes: studentId, Valid: true},
-		TenantID:  pgtype.UUID{Bytes: tenantId, Valid: true},
+		StudentID: studentId,
+		TenantID:  tenantId,
 	})
 
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
 	}
 	return parents, nil
+}
+
+func (service *Service) GetStudentProfile(ctx context.Context, tenantId, studentId uuid.UUID) (*store.GetStudentProfileRow, error) {
+
+	studentProfile, err := service.queries.GetStudentProfile(ctx, store.GetStudentProfileParams{
+		ID:       studentId,
+		TenantID: tenantId,
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierror.NotFound("Student profile not found")
+		}
+		return nil, academic.TranslateAcademicError(err)
+	}
+	return &studentProfile, nil
+}
+
+func (service *Service) SearchStudent(ctx context.Context, tenantId uuid.UUID, searchRequest SearchStudentRequest) ([]store.Student, error) {
+
+	students, err := service.queries.SearchStudents(ctx, store.SearchStudentsParams{
+		TenantID:        tenantId,
+		Search:          searchRequest.Query,
+		CurrentClassArm: searchRequest.ClassArmId,
+		Status:          searchRequest.Status,
+	})
+
+	if err != nil {
+		return nil, academic.TranslateAcademicError(err)
+	}
+	return students, nil
+}
+
+func (service *Service) UpdateStudent(ctx context.Context, tenantId, studentId uuid.UUID, request UpdateStudentRequest) (*store.Student, error) {
+
+	var dateOfBirth *time.Time
+
+	if request.DateOfBirth != nil {
+		time, _ := time.Parse("2026-01-30", *request.DateOfBirth)
+		dateOfBirth = &time
+	}
+
+	updatedStudent, err := service.queries.UpdateStudent(ctx, store.UpdateStudentParams{
+		ID:                studentId,
+		TenantID:          tenantId,
+		FirstName:         request.FirstName,
+		LastName:          request.LastName,
+		MiddleName:        request.MiddleName,
+		Gender:            request.Gender,
+		DateOfBirth:       dateOfBirth,
+		CurrentClassArmID: request.CurrentClassArmID,
+		Status:            request.Status,
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierror.NotFound("Student profile not found")
+		}
+		return nil, academic.TranslateAcademicError(err)
+	}
+
+	return &updatedStudent, nil
 }

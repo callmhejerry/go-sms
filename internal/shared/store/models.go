@@ -5,34 +5,37 @@
 package store
 
 import (
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AcademicSession struct {
-	ID        pgtype.UUID        `json:"id"`
-	TenantID  pgtype.UUID        `json:"tenant_id"`
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
 	Name      string             `json:"name"`
-	StartDate pgtype.Date        `json:"start_date"`
-	EndDate   pgtype.Date        `json:"end_date"`
+	StartDate time.Time          `json:"start_date"`
+	EndDate   time.Time          `json:"end_date"`
 	IsCurrent bool               `json:"is_current"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Admission struct {
-	ID                 pgtype.UUID        `json:"id"`
-	TenantID           pgtype.UUID        `json:"tenant_id"`
-	AcademicSessionID  pgtype.UUID        `json:"academic_session_id"`
+	ID                 uuid.UUID          `json:"id"`
+	TenantID           uuid.UUID          `json:"tenant_id"`
+	AcademicSessionID  uuid.UUID          `json:"academic_session_id"`
 	FirstName          string             `json:"first_name"`
 	LastName           string             `json:"last_name"`
 	MiddleName         *string            `json:"middle_name"`
 	Gender             string             `json:"gender"`
-	DateOfBirth        pgtype.Date        `json:"date_of_birth"`
-	PreferredClassID   pgtype.UUID        `json:"preferred_class_id"`
+	DateOfBirth        time.Time          `json:"date_of_birth"`
+	PreferredClassID   *uuid.UUID         `json:"preferred_class_id"`
 	Status             string             `json:"status"`
 	AdmissionNumber    *string            `json:"admission_number"`
-	StudentID          pgtype.UUID        `json:"student_id"`
-	ReviewedBy         pgtype.UUID        `json:"reviewed_by"`
+	StudentID          *uuid.UUID         `json:"student_id"`
+	ReviewedBy         *uuid.UUID         `json:"reviewed_by"`
 	ReviewedAt         pgtype.Timestamptz `json:"reviewed_at"`
 	RejectionReason    *string            `json:"rejection_reason"`
 	ParentFirstName    string             `json:"parent_first_name"`
@@ -45,8 +48,8 @@ type Admission struct {
 }
 
 type Class struct {
-	ID         pgtype.UUID        `json:"id"`
-	TenantID   pgtype.UUID        `json:"tenant_id"`
+	ID         uuid.UUID          `json:"id"`
+	TenantID   uuid.UUID          `json:"tenant_id"`
 	Name       string             `json:"name"`
 	LevelOrder int32              `json:"level_order"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
@@ -54,17 +57,17 @@ type Class struct {
 }
 
 type ClassArm struct {
-	ID        pgtype.UUID        `json:"id"`
-	TenantID  pgtype.UUID        `json:"tenant_id"`
-	ClassID   pgtype.UUID        `json:"class_id"`
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
+	ClassID   uuid.UUID          `json:"class_id"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Parent struct {
-	ID          pgtype.UUID        `json:"id"`
-	TenantID    pgtype.UUID        `json:"tenant_id"`
+	ID          uuid.UUID          `json:"id"`
+	TenantID    uuid.UUID          `json:"tenant_id"`
 	FirstName   string             `json:"first_name"`
 	LastName    string             `json:"last_name"`
 	Email       *string            `json:"email"`
@@ -75,8 +78,8 @@ type Parent struct {
 }
 
 type Role struct {
-	ID          pgtype.UUID        `json:"id"`
-	TenantID    pgtype.UUID        `json:"tenant_id"`
+	ID          uuid.UUID          `json:"id"`
+	TenantID    uuid.UUID          `json:"tenant_id"`
 	Name        string             `json:"name"`
 	Description *string            `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
@@ -84,31 +87,31 @@ type Role struct {
 }
 
 type Student struct {
-	ID                 pgtype.UUID        `json:"id"`
-	TenantID           pgtype.UUID        `json:"tenant_id"`
+	ID                 uuid.UUID          `json:"id"`
+	TenantID           uuid.UUID          `json:"tenant_id"`
 	AdmissionNumber    string             `json:"admission_number"`
 	FirstName          string             `json:"first_name"`
 	LastName           string             `json:"last_name"`
 	MiddleName         *string            `json:"middle_name"`
 	Gender             string             `json:"gender"`
-	DateOfBirth        pgtype.Date        `json:"date_of_birth"`
+	DateOfBirth        time.Time          `json:"date_of_birth"`
 	Status             string             `json:"status"`
-	CurrentClassArmID  pgtype.UUID        `json:"current_class_arm_id"`
-	AdmissionSessionID pgtype.UUID        `json:"admission_session_id"`
+	CurrentClassArmID  *uuid.UUID         `json:"current_class_arm_id"`
+	AdmissionSessionID *uuid.UUID         `json:"admission_session_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
 type StudentParent struct {
-	StudentID    pgtype.UUID        `json:"student_id"`
-	ParentID     pgtype.UUID        `json:"parent_id"`
+	StudentID    uuid.UUID          `json:"student_id"`
+	ParentID     uuid.UUID          `json:"parent_id"`
 	Relationship string             `json:"relationship"`
 	IsPrimary    bool               `json:"is_primary"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type Tenant struct {
-	ID        pgtype.UUID        `json:"id"`
+	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
 	Slug      string             `json:"slug"`
 	Status    string             `json:"status"`
@@ -117,8 +120,8 @@ type Tenant struct {
 }
 
 type User struct {
-	ID           pgtype.UUID        `json:"id"`
-	TenantID     pgtype.UUID        `json:"tenant_id"`
+	ID           uuid.UUID          `json:"id"`
+	TenantID     uuid.UUID          `json:"tenant_id"`
 	Email        string             `json:"email"`
 	PasswordHash string             `json:"password_hash"`
 	FirstName    string             `json:"first_name"`
@@ -129,7 +132,7 @@ type User struct {
 }
 
 type UserRole struct {
-	UserID     pgtype.UUID        `json:"user_id"`
-	RoleID     pgtype.UUID        `json:"role_id"`
+	UserID     uuid.UUID          `json:"user_id"`
+	RoleID     uuid.UUID          `json:"role_id"`
 	AssignedAt pgtype.Timestamptz `json:"assigned_at"`
 }

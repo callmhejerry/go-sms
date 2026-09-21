@@ -119,3 +119,80 @@ func (handler *Handler) GetStudentParents(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(parents)
 }
+
+func (handler *Handler) GetStudentProfile(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+		return
+	}
+
+	studentID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid student id"), handler.logger)
+		return
+	}
+
+	studentProfile, err := handler.service.GetStudentProfile(r.Context(), claims.TenantID, studentID)
+
+	if err != nil {
+		apierror.WriteError(w, err, handler.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(studentProfile)
+}
+
+func (handler *Handler) SearchStudents(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+		return
+	}
+
+	var request SearchStudentRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid request body"), handler.logger)
+		return
+	}
+
+	students, err := handler.service.SearchStudent(r.Context(), claims.TenantID, request)
+
+	if err != nil {
+		apierror.WriteError(w, err, handler.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(students)
+}
+
+func (h *Handler) UpdateStudent(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	studentID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid student id"), h.logger)
+		return
+	}
+
+	var input UpdateStudentRequest
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid request body"), h.logger)
+		return
+	}
+
+	student, err := h.service.UpdateStudent(r.Context(), claims.TenantID, studentID, input)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(student)
+}

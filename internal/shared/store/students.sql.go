@@ -7,7 +7,9 @@ package store
 
 import (
 	"context"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -21,12 +23,12 @@ RETURNING id, tenant_id, first_name, last_name, email, phone_number, address, cr
 `
 
 type CreateParentParams struct {
-	TenantID    pgtype.UUID `json:"tenant_id"`
-	FirstName   string      `json:"first_name"`
-	LastName    string      `json:"last_name"`
-	Email       *string     `json:"email"`
-	PhoneNumber string      `json:"phone_number"`
-	Address     *string     `json:"address"`
+	TenantID    uuid.UUID `json:"tenant_id"`
+	FirstName   string    `json:"first_name"`
+	LastName    string    `json:"last_name"`
+	Email       *string   `json:"email"`
+	PhoneNumber string    `json:"phone_number"`
+	Address     *string   `json:"address"`
 }
 
 func (q *Queries) CreateParent(ctx context.Context, arg CreateParentParams) (Parent, error) {
@@ -65,16 +67,16 @@ RETURNING id, tenant_id, admission_number, first_name, last_name, middle_name, g
 `
 
 type CreateStudentParams struct {
-	TenantID           pgtype.UUID `json:"tenant_id"`
-	AdmissionNumber    string      `json:"admission_number"`
-	FirstName          string      `json:"first_name"`
-	LastName           string      `json:"last_name"`
-	MiddleName         *string     `json:"middle_name"`
-	Gender             string      `json:"gender"`
-	DateOfBirth        pgtype.Date `json:"date_of_birth"`
-	Status             string      `json:"status"`
-	CurrentClassArmID  pgtype.UUID `json:"current_class_arm_id"`
-	AdmissionSessionID pgtype.UUID `json:"admission_session_id"`
+	TenantID           uuid.UUID  `json:"tenant_id"`
+	AdmissionNumber    string     `json:"admission_number"`
+	FirstName          string     `json:"first_name"`
+	LastName           string     `json:"last_name"`
+	MiddleName         *string    `json:"middle_name"`
+	Gender             string     `json:"gender"`
+	DateOfBirth        time.Time  `json:"date_of_birth"`
+	Status             string     `json:"status"`
+	CurrentClassArmID  *uuid.UUID `json:"current_class_arm_id"`
+	AdmissionSessionID *uuid.UUID `json:"admission_session_id"`
 }
 
 func (q *Queries) CreateStudent(ctx context.Context, arg CreateStudentParams) (Student, error) {
@@ -115,8 +117,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetParentByIdParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetParentById(ctx context.Context, arg GetParentByIdParams) (Parent, error) {
@@ -143,13 +145,13 @@ WHERE sp.student_id = $1 AND p.tenant_id = $2
 `
 
 type GetParentsByStudentParams struct {
-	StudentID pgtype.UUID `json:"student_id"`
-	TenantID  pgtype.UUID `json:"tenant_id"`
+	StudentID uuid.UUID `json:"student_id"`
+	TenantID  uuid.UUID `json:"tenant_id"`
 }
 
 type GetParentsByStudentRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	TenantID     pgtype.UUID        `json:"tenant_id"`
+	ID           uuid.UUID          `json:"id"`
+	TenantID     uuid.UUID          `json:"tenant_id"`
 	FirstName    string             `json:"first_name"`
 	LastName     string             `json:"last_name"`
 	Email        *string            `json:"email"`
@@ -199,8 +201,8 @@ WHERE id = $1 AND tenant_id = $2
 `
 
 type GetStudentByIDParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 func (q *Queries) GetStudentByID(ctx context.Context, arg GetStudentByIDParams) (Student, error) {
@@ -224,7 +226,7 @@ func (q *Queries) GetStudentByID(ctx context.Context, arg GetStudentByIDParams) 
 	return i, err
 }
 
-const getStudentById = `-- name: GetStudentById :one
+const getStudentProfile = `-- name: GetStudentProfile :one
 SELECT s.id, s.tenant_id, s.admission_number, s.first_name, s.last_name, s.middle_name, s.gender, s.date_of_birth, s.status, s.current_class_arm_id, s.admission_session_id, s.created_at, s.updated_at, 
     c.name as class_name,
     ca.name as class_arm_name,
@@ -236,23 +238,23 @@ LEFT JOIN academic_sessions sess ON sess.id = s.academic_session_id
 WHERE s.id = $1 AND s.tenant_id = $2
 `
 
-type GetStudentByIdParams struct {
-	ID       pgtype.UUID `json:"id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+type GetStudentProfileParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
-type GetStudentByIdRow struct {
-	ID                   pgtype.UUID        `json:"id"`
-	TenantID             pgtype.UUID        `json:"tenant_id"`
+type GetStudentProfileRow struct {
+	ID                   uuid.UUID          `json:"id"`
+	TenantID             uuid.UUID          `json:"tenant_id"`
 	AdmissionNumber      string             `json:"admission_number"`
 	FirstName            string             `json:"first_name"`
 	LastName             string             `json:"last_name"`
 	MiddleName           *string            `json:"middle_name"`
 	Gender               string             `json:"gender"`
-	DateOfBirth          pgtype.Date        `json:"date_of_birth"`
+	DateOfBirth          time.Time          `json:"date_of_birth"`
 	Status               string             `json:"status"`
-	CurrentClassArmID    pgtype.UUID        `json:"current_class_arm_id"`
-	AdmissionSessionID   pgtype.UUID        `json:"admission_session_id"`
+	CurrentClassArmID    *uuid.UUID         `json:"current_class_arm_id"`
+	AdmissionSessionID   *uuid.UUID         `json:"admission_session_id"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 	ClassName            *string            `json:"class_name"`
@@ -260,9 +262,9 @@ type GetStudentByIdRow struct {
 	AdmissionSessionName *string            `json:"admission_session_name"`
 }
 
-func (q *Queries) GetStudentById(ctx context.Context, arg GetStudentByIdParams) (GetStudentByIdRow, error) {
-	row := q.db.QueryRow(ctx, getStudentById, arg.ID, arg.TenantID)
-	var i GetStudentByIdRow
+func (q *Queries) GetStudentProfile(ctx context.Context, arg GetStudentProfileParams) (GetStudentProfileRow, error) {
+	row := q.db.QueryRow(ctx, getStudentProfile, arg.ID, arg.TenantID)
+	var i GetStudentProfileRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
@@ -291,22 +293,22 @@ WHERE sp.parent_id = $1 AND s.tenant_id = $2
 `
 
 type GetStudentsByParentParams struct {
-	ParentID pgtype.UUID `json:"parent_id"`
-	TenantID pgtype.UUID `json:"tenant_id"`
+	ParentID uuid.UUID `json:"parent_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 type GetStudentsByParentRow struct {
-	ID                 pgtype.UUID        `json:"id"`
-	TenantID           pgtype.UUID        `json:"tenant_id"`
+	ID                 uuid.UUID          `json:"id"`
+	TenantID           uuid.UUID          `json:"tenant_id"`
 	AdmissionNumber    string             `json:"admission_number"`
 	FirstName          string             `json:"first_name"`
 	LastName           string             `json:"last_name"`
 	MiddleName         *string            `json:"middle_name"`
 	Gender             string             `json:"gender"`
-	DateOfBirth        pgtype.Date        `json:"date_of_birth"`
+	DateOfBirth        time.Time          `json:"date_of_birth"`
 	Status             string             `json:"status"`
-	CurrentClassArmID  pgtype.UUID        `json:"current_class_arm_id"`
-	AdmissionSessionID pgtype.UUID        `json:"admission_session_id"`
+	CurrentClassArmID  *uuid.UUID         `json:"current_class_arm_id"`
+	AdmissionSessionID *uuid.UUID         `json:"admission_session_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	Relationship       string             `json:"relationship"`
@@ -359,10 +361,10 @@ ON CONFLICT DO NOTHING
 `
 
 type LinkStudentParentParams struct {
-	StudentID    pgtype.UUID `json:"student_id"`
-	ParentID     pgtype.UUID `json:"parent_id"`
-	Relationship string      `json:"relationship"`
-	IsPrimary    bool        `json:"is_primary"`
+	StudentID    uuid.UUID `json:"student_id"`
+	ParentID     uuid.UUID `json:"parent_id"`
+	Relationship string    `json:"relationship"`
+	IsPrimary    bool      `json:"is_primary"`
 }
 
 func (q *Queries) LinkStudentParent(ctx context.Context, arg LinkStudentParentParams) error {
@@ -381,7 +383,7 @@ WHERE tenant_id = $1
 ORDER BY last_name, first_name
 `
 
-func (q *Queries) ListStudents(ctx context.Context, tenantID pgtype.UUID) ([]Student, error) {
+func (q *Queries) ListStudents(ctx context.Context, tenantID uuid.UUID) ([]Student, error) {
 	rows, err := q.db.Query(ctx, listStudents, tenantID)
 	if err != nil {
 		return nil, err
@@ -430,18 +432,18 @@ ORDER BY last_name, first_name
 `
 
 type SearchStudentsParams struct {
-	TenantID pgtype.UUID `json:"tenant_id"`
-	Column2  string      `json:"column_2"`
-	Column3  pgtype.UUID `json:"column_3"`
-	Column4  string      `json:"column_4"`
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	Search          *string    `json:"search"`
+	CurrentClassArm *uuid.UUID `json:"current_class_arm"`
+	Status          *string    `json:"status"`
 }
 
 func (q *Queries) SearchStudents(ctx context.Context, arg SearchStudentsParams) ([]Student, error) {
 	rows, err := q.db.Query(ctx, searchStudents,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
+		arg.Search,
+		arg.CurrentClassArm,
+		arg.Status,
 	)
 	if err != nil {
 		return nil, err
@@ -491,15 +493,15 @@ RETURNING id, tenant_id, admission_number, first_name, last_name, middle_name, g
 `
 
 type UpdateStudentParams struct {
-	ID                pgtype.UUID `json:"id"`
-	TenantID          pgtype.UUID `json:"tenant_id"`
-	FirstName         string      `json:"first_name"`
-	LastName          string      `json:"last_name"`
-	MiddleName        *string     `json:"middle_name"`
-	Gender            string      `json:"gender"`
-	DateOfBirth       pgtype.Date `json:"date_of_birth"`
-	CurrentClassArmID pgtype.UUID `json:"current_class_arm_id"`
-	Status            string      `json:"status"`
+	ID                uuid.UUID  `json:"id"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	FirstName         *string    `json:"first_name"`
+	LastName          *string    `json:"last_name"`
+	MiddleName        *string    `json:"middle_name"`
+	Gender            *string    `json:"gender"`
+	DateOfBirth       *time.Time `json:"date_of_birth"`
+	CurrentClassArmID *uuid.UUID `json:"current_class_arm_id"`
+	Status            *string    `json:"status"`
 }
 
 func (q *Queries) UpdateStudent(ctx context.Context, arg UpdateStudentParams) (Student, error) {

@@ -11,7 +11,6 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Service struct {
@@ -27,8 +26,8 @@ func NewService(queries *store.Queries, jwtManager *auth.JWTManager) *Service {
 }
 
 var (
-	InvalidCredentials = apierror.New("invalid_credentials", "Invalid email or password", http.StatusUnauthorized)
-	InactiveUser       = apierror.New("user_inactive", "Invalid email or password", http.StatusUnauthorized)
+	InvalidCredentials = apierror.New("invalid_credentials", "Invalid email or password", http.StatusUnauthorized, nil, nil)
+	InactiveUser       = apierror.New("user_inactive", "Invalid email or password", http.StatusUnauthorized, nil, nil)
 )
 
 func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, input CreateUserRequest) (*store.User, error) {
@@ -59,10 +58,7 @@ func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, inpu
 	}
 
 	newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
-		TenantID: pgtype.UUID{
-			Bytes: [16]byte(tenantId),
-			Valid: true,
-		},
+		TenantID:     tenantId,
 		Email:        input.Email,
 		FirstName:    firstName,
 		LastName:     lastName,
@@ -77,14 +73,8 @@ func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, inpu
 
 func (service *Service) GetUserByID(ctx context.Context, id uuid.UUID, tenant_id uuid.UUID) (*store.User, error) {
 	user, err := service.queries.GetUserByID(ctx, store.GetUserByIDParams{
-		ID: pgtype.UUID{
-			Bytes: id,
-			Valid: true,
-		},
-		TenantID: pgtype.UUID{
-			Bytes: tenant_id,
-			Valid: true,
-		},
+		ID:       id,
+		TenantID: tenant_id,
 	})
 
 	if err != nil {
@@ -168,10 +158,7 @@ func (service *Service) CreateRole(ctx context.Context, tenantId uuid.UUID, inpu
 		return nil, apierror.Validation("name is required")
 	}
 	role, err := service.queries.CreateRole(ctx, store.CreateRoleParams{
-		TenantID: pgtype.UUID{
-			Bytes: tenantId,
-			Valid: true,
-		},
+		TenantID:    tenantId,
 		Name:        name,
 		Description: &input.Description,
 	})
@@ -184,8 +171,8 @@ func (service *Service) CreateRole(ctx context.Context, tenantId uuid.UUID, inpu
 
 func (service *Service) AssignRole(ctx context.Context, userId, roleId uuid.UUID) error {
 	err := service.queries.AssignRoleToUser(ctx, store.AssignRoleToUserParams{
-		UserID: pgtype.UUID{Bytes: userId, Valid: true},
-		RoleID: pgtype.UUID{Bytes: roleId, Valid: true},
+		UserID: userId,
+		RoleID: roleId,
 	})
 	if err != nil {
 		return apierror.Internal(err, "failed to create role")
@@ -195,10 +182,7 @@ func (service *Service) AssignRole(ctx context.Context, userId, roleId uuid.UUID
 
 func (service *Service) GetUserRoles(ctx context.Context, userId uuid.UUID) ([]store.Role, error) {
 
-	roles, err := service.queries.GetUserRoles(ctx, pgtype.UUID{
-		Bytes: userId,
-		Valid: true,
-	})
+	roles, err := service.queries.GetUserRoles(ctx, userId)
 
 	if err != nil {
 		return nil, apierror.Internal(err, "failed to get user roles")
@@ -208,7 +192,7 @@ func (service *Service) GetUserRoles(ctx context.Context, userId uuid.UUID) ([]s
 
 func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleName constants.RoleName) (bool, error) {
 
-	userRoles, err := service.queries.GetUserRoles(ctx, pgtype.UUID{Bytes: userId, Valid: true})
+	userRoles, err := service.queries.GetUserRoles(ctx, userId)
 
 	if err != nil {
 		return false, apierror.Internal(err, "failed to check role")

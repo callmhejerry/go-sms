@@ -12,13 +12,13 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
-	queries *store.Queries
-	pool    *pgxpool.Pool
+	queries            *store.Queries
+	pool               *pgxpool.Pool
+	AcademicRepository *AcademicRepository
 }
 
 func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
@@ -41,26 +41,14 @@ func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid
 		return nil, apierror.Validation("end_date cannot be before start_date")
 	}
 	if request.IsCurrent {
-		_ = service.queries.SetCurrentAcademicSession(ctx, pgtype.UUID{
-			Bytes: tenantId,
-			Valid: true,
-		})
+		_ = service.queries.SetCurrentAcademicSession(ctx, tenantId)
 	}
 
 	session, err := service.queries.CreateAcademicSession(ctx, store.CreateAcademicSessionParams{
-		TenantID: pgtype.UUID{
-			Bytes: tenantId,
-			Valid: true,
-		},
-		Name: name,
-		StartDate: pgtype.Date{
-			Time:  startDate,
-			Valid: true,
-		},
-		EndDate: pgtype.Date{
-			Time:  endDate,
-			Valid: true,
-		},
+		TenantID:  tenantId,
+		Name:      name,
+		StartDate: startDate,
+		EndDate:   endDate,
 		IsCurrent: request.IsCurrent,
 	})
 
@@ -71,10 +59,7 @@ func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid
 }
 
 func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.UUID) ([]store.AcademicSession, error) {
-	sessions, err := service.queries.ListAcademicSessions(ctx, pgtype.UUID{
-		Bytes: tenantId,
-		Valid: true,
-	})
+	sessions, err := service.queries.ListAcademicSessions(ctx, tenantId)
 
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
@@ -83,10 +68,7 @@ func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.U
 }
 
 func (service *Service) GetCurrentAcademicSession(ctx context.Context, tenantId uuid.UUID) (*store.AcademicSession, error) {
-	currentSession, err := service.queries.GetCurrentAcademicSession(ctx, pgtype.UUID{
-		Bytes: tenantId,
-		Valid: true,
-	})
+	currentSession, err := service.queries.GetCurrentAcademicSession(ctx, tenantId)
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
 	}
@@ -95,8 +77,8 @@ func (service *Service) GetCurrentAcademicSession(ctx context.Context, tenantId 
 
 func (service *Service) GetAcademicSessionById(ctx context.Context, tenantId, academicSessionId uuid.UUID) (*store.AcademicSession, error) {
 	academicSession, err := service.queries.GetAcademicSessionById(ctx, store.GetAcademicSessionByIdParams{
-		ID:       pgtype.UUID{Bytes: academicSessionId, Valid: true},
-		TenantID: pgtype.UUID{Bytes: tenantId, Valid: true},
+		ID:       academicSessionId,
+		TenantID: tenantId,
 	})
 
 	if err != nil {
