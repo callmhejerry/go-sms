@@ -42,3 +42,4 @@ SELECT EXISTS (
     WHERE ur.user_id = $1 AND r.name = $2
 )
 AS has_role;
+

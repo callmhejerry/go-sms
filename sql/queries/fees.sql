@@ -40,3 +40,30 @@ ORDER BY ft.name;
 -- name: GetFeeStructureById :one
 SELECT * FROM fee_structures
 WHERE id = $1 AND tenant_id = $2;
+
+
+-- name: CreateStudentFee :one
+INSERT INTO student_fees (
+    tenant_id, student_id, fee_structure_id,
+    amount_kobo, due_date
+)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT ON CONSTRAINT student_fees_unique DO NOTHING
+RETURNING *;
+
+
+-- name: ListStudentFees :many
+SELECT sf.*, ft.name AS fee_type_name
+FROM student_fees sf
+JOIN fee_structures fs ON fs.id = sf.fee_structure_id
+JOIN fee_types ft ON ft.id = fs.fee_type_id
+WHERE sf.tenant_id = $1 AND sf.student_id = $2
+ORDER BY sf.created_at;
+
+-- name: GetStudentFeeByID :one
+SELECT * FROM student_fees
+WHERE id = $1 AND tenant_id = $2;
+
+-- name: ListUnpaidStudentFees :many
+SELECT * FROM student_fees
+WHERE tenant_id = $1 AND student_id = $2 AND status != 'paid';

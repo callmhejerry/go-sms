@@ -2,11 +2,13 @@ package billing
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type BillingRepository interface {
@@ -40,6 +42,13 @@ type BillingRepository interface {
 		tenantId uuid.UUID,
 		academicSessionId uuid.UUID,
 	) ([]store.ListFeeStructuresBySessionRow, *apierror.AppError)
+
+	AssignFeesToStudent(ctx context.Context, tenantId, studentId uuid.UUID, fee_structures []uuid.UUID) ([]store.StudentFee, *apierror.AppError)
+
+	ListStudentFees(
+		ctx context.Context,
+		tenantId, studentId uuid.UUID,
+	) ([]store.ListStudentFeesRow, *apierror.AppError)
 }
 
 type BillingRepositoryImpl struct {
@@ -135,4 +144,58 @@ func (repo *BillingRepositoryImpl) ListFeeStructuresByAcademicSession(
 	}
 
 	return fee_structures, nil
+}
+
+func (repo *BillingRepositoryImpl) AssignFeesToStudent(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+	fee_structures []uuid.UUID,
+) ([]store.StudentFee, *apierror.AppError) {
+	var created []store.StudentFee
+
+	for _, fee_structure_id := range fee_structures {
+		fee_structure, err := repo.queries.GetFeeStructureById(ctx, store.GetFeeStructureByIdParams{
+			ID:       fee_structure_id,
+			TenantID: tenantId,
+		})
+
+		if err != nil {
+			return nil, translateFeeStructuresError(err)
+		}
+
+		studentFee, err := repo.queries.CreateStudentFee(
+			ctx, store.CreateStudentFeeParams{
+				TenantID:       tenantId,
+				StudentID:      studentId,
+				FeeStructureID: fee_structure.ID,
+				AmountKobo:     fee_structure.AmountKobo,
+				DueDate:        fee_structure.DueDate,
+			},
+		)
+
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return nil, translateStudentFeesError(err)
+			}
+		}
+		created = append(created, studentFee)
+	}
+
+	return created, nil
+}
+
+func (repo *BillingRepositoryImpl) ListStudentFees(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) ([]store.ListStudentFeesRow, *apierror.AppError) {
+	studentFees, err := repo.queries.ListStudentFees(
+		ctx, store.ListStudentFeesParams{
+			TenantID:  tenantId,
+			StudentID: studentId,
+		},
+	)
+	if err != nil {
+		return nil, translateStudentFeesError(err)
+	}
+	return studentFees, nil
 }

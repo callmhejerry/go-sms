@@ -113,3 +113,18 @@ func (service *BillingService) ListFeeStructuresByAdmissionId(
 
 	return feeStructures, nil
 }
+
+func (service *BillingService) AssignFeesToStudent(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	request AssignFeesToStudentRequest,
+) ([]store.StudentFee, *apierror.AppError) {
+	return service.billingRepository.AssignFeesToStudent(ctx, tenantId, request.StudentID, request.FeeStructureIDs)
+}
+
+func (service *BillingService) ListStudentFees(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) ([]store.ListStudentFeesRow, *apierror.AppError) {
+	return service.billingRepository.ListStudentFees(ctx, tenantId, studentId)
+}

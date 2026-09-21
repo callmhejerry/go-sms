@@ -15,3 +15,8 @@ type CreatFeeStructureRequest struct {
 	DueDate           *string    `json:"due_date" validate:"omitempty,date"`
 	AmountInKobo      int        `json:"amount_in_kobo" validate:"required,min=1"`
 }
+
+type AssignFeesToStudentRequest struct {
+	StudentID       uuid.UUID   `json:"student_id" validate:"required"`
+	FeeStructureIDs []uuid.UUID `json:"fee_structure_ids" validate:"required,min=1"`
+}

@@ -91,6 +91,48 @@ func (q *Queries) CreateFeeType(ctx context.Context, arg CreateFeeTypeParams) (F
 	return i, err
 }
 
+const createStudentFee = `-- name: CreateStudentFee :one
+INSERT INTO student_fees (
+    tenant_id, student_id, fee_structure_id,
+    amount_kobo, due_date
+)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT ON CONSTRAINT student_fees_unique DO NOTHING
+RETURNING id, tenant_id, student_id, fee_structure_id, amount_kobo, amount_paid_kobo, status, due_date, created_at, updated_at
+`
+
+type CreateStudentFeeParams struct {
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	StudentID      uuid.UUID  `json:"student_id"`
+	FeeStructureID uuid.UUID  `json:"fee_structure_id"`
+	AmountKobo     int64      `json:"amount_kobo"`
+	DueDate        *time.Time `json:"due_date"`
+}
+
+func (q *Queries) CreateStudentFee(ctx context.Context, arg CreateStudentFeeParams) (StudentFee, error) {
+	row := q.db.QueryRow(ctx, createStudentFee,
+		arg.TenantID,
+		arg.StudentID,
+		arg.FeeStructureID,
+		arg.AmountKobo,
+		arg.DueDate,
+	)
+	var i StudentFee
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.StudentID,
+		&i.FeeStructureID,
+		&i.AmountKobo,
+		&i.AmountPaidKobo,
+		&i.Status,
+		&i.DueDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getFeeStructureById = `-- name: GetFeeStructureById :one
 SELECT id, tenant_id, fee_type_id, academic_session_id, class_id, amount_kobo, due_date, created_at, updated_at FROM fee_structures
 WHERE id = $1 AND tenant_id = $2
@@ -111,6 +153,34 @@ func (q *Queries) GetFeeStructureById(ctx context.Context, arg GetFeeStructureBy
 		&i.AcademicSessionID,
 		&i.ClassID,
 		&i.AmountKobo,
+		&i.DueDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getStudentFeeByID = `-- name: GetStudentFeeByID :one
+SELECT id, tenant_id, student_id, fee_structure_id, amount_kobo, amount_paid_kobo, status, due_date, created_at, updated_at FROM student_fees
+WHERE id = $1 AND tenant_id = $2
+`
+
+type GetStudentFeeByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetStudentFeeByID(ctx context.Context, arg GetStudentFeeByIDParams) (StudentFee, error) {
+	row := q.db.QueryRow(ctx, getStudentFeeByID, arg.ID, arg.TenantID)
+	var i StudentFee
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.StudentID,
+		&i.FeeStructureID,
+		&i.AmountKobo,
+		&i.AmountPaidKobo,
+		&i.Status,
 		&i.DueDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -247,6 +317,107 @@ func (q *Queries) ListFeeTypes(ctx context.Context, tenantID uuid.UUID) ([]FeeTy
 			&i.Name,
 			&i.Description,
 			&i.IsOptional,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStudentFees = `-- name: ListStudentFees :many
+SELECT sf.id, sf.tenant_id, sf.student_id, sf.fee_structure_id, sf.amount_kobo, sf.amount_paid_kobo, sf.status, sf.due_date, sf.created_at, sf.updated_at, ft.name AS fee_type_name
+FROM student_fees sf
+JOIN fee_structures fs ON fs.id = sf.fee_structure_id
+JOIN fee_types ft ON ft.id = fs.fee_type_id
+WHERE sf.tenant_id = $1 AND sf.student_id = $2
+ORDER BY sf.created_at
+`
+
+type ListStudentFeesParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	StudentID uuid.UUID `json:"student_id"`
+}
+
+type ListStudentFeesRow struct {
+	ID             uuid.UUID          `json:"id"`
+	TenantID       uuid.UUID          `json:"tenant_id"`
+	StudentID      uuid.UUID          `json:"student_id"`
+	FeeStructureID uuid.UUID          `json:"fee_structure_id"`
+	AmountKobo     int64              `json:"amount_kobo"`
+	AmountPaidKobo int64              `json:"amount_paid_kobo"`
+	Status         string             `json:"status"`
+	DueDate        *time.Time         `json:"due_date"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	FeeTypeName    string             `json:"fee_type_name"`
+}
+
+func (q *Queries) ListStudentFees(ctx context.Context, arg ListStudentFeesParams) ([]ListStudentFeesRow, error) {
+	rows, err := q.db.Query(ctx, listStudentFees, arg.TenantID, arg.StudentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStudentFeesRow{}
+	for rows.Next() {
+		var i ListStudentFeesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.StudentID,
+			&i.FeeStructureID,
+			&i.AmountKobo,
+			&i.AmountPaidKobo,
+			&i.Status,
+			&i.DueDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FeeTypeName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUnpaidStudentFees = `-- name: ListUnpaidStudentFees :many
+SELECT id, tenant_id, student_id, fee_structure_id, amount_kobo, amount_paid_kobo, status, due_date, created_at, updated_at FROM student_fees
+WHERE tenant_id = $1 AND student_id = $2 AND status != 'paid'
+`
+
+type ListUnpaidStudentFeesParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	StudentID uuid.UUID `json:"student_id"`
+}
+
+func (q *Queries) ListUnpaidStudentFees(ctx context.Context, arg ListUnpaidStudentFeesParams) ([]StudentFee, error) {
+	rows, err := q.db.Query(ctx, listUnpaidStudentFees, arg.TenantID, arg.StudentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StudentFee{}
+	for rows.Next() {
+		var i StudentFee
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.StudentID,
+			&i.FeeStructureID,
+			&i.AmountKobo,
+			&i.AmountPaidKobo,
+			&i.Status,
+			&i.DueDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

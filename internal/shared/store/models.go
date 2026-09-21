@@ -124,6 +124,19 @@ type Student struct {
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StudentFee struct {
+	ID             uuid.UUID          `json:"id"`
+	TenantID       uuid.UUID          `json:"tenant_id"`
+	StudentID      uuid.UUID          `json:"student_id"`
+	FeeStructureID uuid.UUID          `json:"fee_structure_id"`
+	AmountKobo     int64              `json:"amount_kobo"`
+	AmountPaidKobo int64              `json:"amount_paid_kobo"`
+	Status         string             `json:"status"`
+	DueDate        *time.Time         `json:"due_date"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StudentParent struct {
 	StudentID    uuid.UUID          `json:"student_id"`
 	ParentID     uuid.UUID          `json:"parent_id"`
