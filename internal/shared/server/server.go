@@ -106,6 +106,10 @@ func New(
 	protectedMux.HandleFunc("POST /api/v1/student-fees/assign", handlers.Billing.AssignFeesToStudent)
 	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/fees", handlers.Billing.ListStudentFees)
 
+	// Payments
+	protectedMux.HandleFunc("POST /api/v1/payments", handlers.Billing.RecordPayment)
+	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/payments", handlers.Billing.ListStudentPayments)
+
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
 	mux.Handle("/", protectedHandler)

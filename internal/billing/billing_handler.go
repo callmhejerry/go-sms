@@ -199,3 +199,58 @@ func (h *BillingHandler) ListStudentFees(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(fees)
 }
+
+func (h *BillingHandler) RecordPayment(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	var request RecordPaymentRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		apierror.WriteError(w, apierror.Validation("Invalid request body"), h.logger)
+		return
+	}
+	if err := h.validator.ValidateStruct(request); err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	payment, err := h.billingService.RecordPayments(
+		r.Context(), claims.TenantID, claims.UserID,
+		request,
+	)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(payment)
+}
+
+func (h *BillingHandler) ListStudentPayments(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	studentID, err := uuid.Parse(r.PathValue("student_id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid student id"), h.logger)
+		return
+	}
+
+	payments, err := h.billingService.ListStudentPayments(r.Context(), claims.TenantID, studentID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(payments)
+}
