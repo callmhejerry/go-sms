@@ -10,6 +10,7 @@ import (
 	"github.com/callmhejerry/sms/internal/academic/classes"
 	"github.com/callmhejerry/sms/internal/academic/student"
 	"github.com/callmhejerry/sms/internal/admission"
+	"github.com/callmhejerry/sms/internal/billing"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
@@ -29,6 +30,7 @@ type Handlers struct {
 	Classes         *classes.Handler
 	Admission       *admission.Handler
 	Student         *student.Handler
+	Billing         *billing.BillingHandler
 }
 
 func New(
@@ -91,6 +93,14 @@ func New(
 	protectedMux.Handle("POST /api/v1/admissions", adminOnly(http.HandlerFunc(handlers.Admission.CreateAdmission)))
 	protectedMux.Handle("GET /api/v1/admissions", adminOnly(http.HandlerFunc(handlers.Admission.ListAdmissions)))
 	protectedMux.Handle("POST /api/v1/admissions/{id}/accept", adminOnly(http.HandlerFunc(handlers.Admission.AcceptAdmission)))
+
+	// Fee Types
+	protectedMux.HandleFunc("POST /api/v1/fee-types", handlers.Billing.CreateFeeType)
+	protectedMux.HandleFunc("GET /api/v1/fee-types", handlers.Billing.ListFeeTypes)
+
+	// Fee Structures
+	protectedMux.HandleFunc("POST /api/v1/fee-structures", handlers.Billing.CreateFeeStructure)
+	protectedMux.HandleFunc("GET /api/v1/fee-structures", handlers.Billing.ListFeeStructures)
 
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)

@@ -48,6 +48,13 @@ func (service *BillingService) CreateFeeStructure(
 	)
 }
 
+func (service *BillingService) ListFeeTypes(
+	ctx context.Context,
+	tenantId uuid.UUID,
+) ([]store.FeeType, *apierror.AppError) {
+	return service.billingRepository.ListFeeTypes(ctx, tenantId)
+}
+
 func (service *BillingService) ListFeeStructures(
 	ctx context.Context,
 	tenantId uuid.UUID,
