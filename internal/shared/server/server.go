@@ -79,11 +79,11 @@ func New(
 
 	// STUDENTS ROUTES
 	protectedMux.Handle("POST /api/v1/students", adminOnly(http.HandlerFunc(handlers.Student.CreateStudent)))
-	protectedMux.HandleFunc("GET /api/v1/students", handlers.Student.ListStudents)
+	protectedMux.HandleFunc("GET /api/v1/students-page", handlers.Student.ListStudentsPage)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}", handlers.Student.GetStudent)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}/parents", handlers.Student.GetStudentParents)
 	protectedMux.HandleFunc("GET /api/v1/students/{id}/profile", handlers.Student.GetStudentProfile)
-	protectedMux.HandleFunc("GET /api/v1/students/search", handlers.Student.SearchStudents)
+	protectedMux.HandleFunc("GET /api/v1/students/search-page", handlers.Student.SearchStudentsPage)
 	protectedMux.HandleFunc("PATCH /api/v1/students/{id}", handlers.Student.UpdateStudent)
 
 	// ADMISSIONS ROUTE

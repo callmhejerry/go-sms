@@ -13,6 +13,44 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countSearchStudents = `-- name: CountSearchStudents :one
+SELECT COUNT(*) FROM students
+WHERE tenant_id = $1
+    AND (
+        $2::text IS NULL OR
+        first_name ILIKE '%' || $2 || '%' OR 
+        last_name ILIKE '%' || $2 || '%' OR
+        admission_number ILIKE '%' || $2 || '%'
+    )
+    AND (
+        $3::uuid IS NULL
+        OR current_class_arm_id = $3::uuid
+    )
+    AND (
+        $4::text IS NULL
+        OR status = $4::text
+)
+`
+
+type CountSearchStudentsParams struct {
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	Search          *string    `json:"search"`
+	CurrentClassArm *uuid.UUID `json:"current_class_arm"`
+	Status          *string    `json:"status"`
+}
+
+func (q *Queries) CountSearchStudents(ctx context.Context, arg CountSearchStudentsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSearchStudents,
+		arg.TenantID,
+		arg.Search,
+		arg.CurrentClassArm,
+		arg.Status,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createParent = `-- name: CreateParent :one
 INSERT INTO parents(
     tenant_id, first_name, last_name,
@@ -377,14 +415,33 @@ func (q *Queries) LinkStudentParent(ctx context.Context, arg LinkStudentParentPa
 	return err
 }
 
-const listStudents = `-- name: ListStudents :many
+const listStudentsCursor = `-- name: ListStudentsCursor :many
 SELECT id, tenant_id, admission_number, first_name, last_name, middle_name, gender, date_of_birth, status, current_class_arm_id, admission_session_id, created_at, updated_at FROM students
 WHERE tenant_id = $1
-ORDER BY last_name, first_name
+    AND (
+    $2::text IS NULL
+    OR (last_name, first_name, id) > ($2, $3, $4)
+)
+ORDER BY last_name, first_name, id
+LIMIT $5
 `
 
-func (q *Queries) ListStudents(ctx context.Context, tenantID uuid.UUID) ([]Student, error) {
-	rows, err := q.db.Query(ctx, listStudents, tenantID)
+type ListStudentsCursorParams struct {
+	TenantID        uuid.UUID `json:"tenant_id"`
+	CursorLastName  *string   `json:"cursor_last_name"`
+	CursorFirstName string    `json:"cursor_first_name"`
+	CursorID        string    `json:"cursor_id"`
+	Limit           int32     `json:"limit"`
+}
+
+func (q *Queries) ListStudentsCursor(ctx context.Context, arg ListStudentsCursorParams) ([]Student, error) {
+	rows, err := q.db.Query(ctx, listStudentsCursor,
+		arg.TenantID,
+		arg.CursorLastName,
+		arg.CursorFirstName,
+		arg.CursorID,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +474,55 @@ func (q *Queries) ListStudents(ctx context.Context, tenantID uuid.UUID) ([]Stude
 	return items, nil
 }
 
-const searchStudents = `-- name: SearchStudents :many
+const listStudentsPage = `-- name: ListStudentsPage :many
+SELECT id, tenant_id, admission_number, first_name, last_name, middle_name, gender, date_of_birth, status, current_class_arm_id, admission_session_id, created_at, updated_at FROM students
+WHERE tenant_id = $1
+ORDER BY last_name, first_name, id
+LIMIT $3
+OFFSET $2
+`
+
+type ListStudentsPageParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	Offset   int32     `json:"offset"`
+	Limit    int32     `json:"limit"`
+}
+
+func (q *Queries) ListStudentsPage(ctx context.Context, arg ListStudentsPageParams) ([]Student, error) {
+	rows, err := q.db.Query(ctx, listStudentsPage, arg.TenantID, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Student{}
+	for rows.Next() {
+		var i Student
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.AdmissionNumber,
+			&i.FirstName,
+			&i.LastName,
+			&i.MiddleName,
+			&i.Gender,
+			&i.DateOfBirth,
+			&i.Status,
+			&i.CurrentClassArmID,
+			&i.AdmissionSessionID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchStudentsCursor = `-- name: SearchStudentsCursor :many
 SELECT id, tenant_id, admission_number, first_name, last_name, middle_name, gender, date_of_birth, status, current_class_arm_id, admission_session_id, created_at, updated_at FROM students
 WHERE tenant_id = $1
     AND (
@@ -426,24 +531,115 @@ WHERE tenant_id = $1
         last_name ILIKE '%' || $2 || '%' OR
         admission_number ILIKE '%' || $2 || '%'
     )
-    AND ($3::uuid IS NULL OR current_class_arm_id = $3)
-    AND ($4::text IS NULL OR status = $4)
-ORDER BY last_name, first_name
+    AND (
+        $3::uuid IS NULL
+        OR current_class_arm_id = $3::uuid
+    )
+    AND (
+        $4::text IS NULL
+        OR status = $4::text
+    )
+    AND (
+        $5::text IS NULL
+        OR (last_name, first_name, id) > ($5::text, $6::text, $7::uuid)
+    )
+ORDER BY last_name, first_name, id
+LIMIT $8
 `
 
-type SearchStudentsParams struct {
+type SearchStudentsCursorParams struct {
 	TenantID        uuid.UUID  `json:"tenant_id"`
 	Search          *string    `json:"search"`
 	CurrentClassArm *uuid.UUID `json:"current_class_arm"`
 	Status          *string    `json:"status"`
+	CursorLastName  *string    `json:"cursor_last_name"`
+	CursorFirstName *string    `json:"cursor_first_name"`
+	CursorID        *uuid.UUID `json:"cursor_id"`
+	Limit           int32      `json:"limit"`
 }
 
-func (q *Queries) SearchStudents(ctx context.Context, arg SearchStudentsParams) ([]Student, error) {
-	rows, err := q.db.Query(ctx, searchStudents,
+func (q *Queries) SearchStudentsCursor(ctx context.Context, arg SearchStudentsCursorParams) ([]Student, error) {
+	rows, err := q.db.Query(ctx, searchStudentsCursor,
 		arg.TenantID,
 		arg.Search,
 		arg.CurrentClassArm,
 		arg.Status,
+		arg.CursorLastName,
+		arg.CursorFirstName,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Student{}
+	for rows.Next() {
+		var i Student
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.AdmissionNumber,
+			&i.FirstName,
+			&i.LastName,
+			&i.MiddleName,
+			&i.Gender,
+			&i.DateOfBirth,
+			&i.Status,
+			&i.CurrentClassArmID,
+			&i.AdmissionSessionID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchStudentsPage = `-- name: SearchStudentsPage :many
+SELECT id, tenant_id, admission_number, first_name, last_name, middle_name, gender, date_of_birth, status, current_class_arm_id, admission_session_id, created_at, updated_at FROM students
+WHERE tenant_id = $1
+    AND (
+        $2::text IS NULL OR
+        first_name ILIKE '%' || $2 || '%' OR 
+        last_name ILIKE '%' || $2 || '%' OR
+        admission_number ILIKE '%' || $2 || '%'
+    )
+    AND (
+        $3::uuid IS NULL
+        OR current_class_arm_id = $3::uuid
+    )
+    AND (
+        $4::text IS NULL
+        OR status = $4::text
+    )
+ORDER BY last_name, first_name, id
+LIMIT $6
+OFFSET $5
+`
+
+type SearchStudentsPageParams struct {
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	Search          *string    `json:"search"`
+	CurrentClassArm *uuid.UUID `json:"current_class_arm"`
+	Status          *string    `json:"status"`
+	Offset          int32      `json:"offset"`
+	Limit           int32      `json:"limit"`
+}
+
+func (q *Queries) SearchStudentsPage(ctx context.Context, arg SearchStudentsPageParams) ([]Student, error) {
+	rows, err := q.db.Query(ctx, searchStudentsPage,
+		arg.TenantID,
+		arg.Search,
+		arg.CurrentClassArm,
+		arg.Status,
+		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err

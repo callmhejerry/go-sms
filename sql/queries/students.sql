@@ -12,10 +12,22 @@ RETURNING *;
 SELECT * FROM students
 WHERE id = $1 AND tenant_id = $2;
 
--- name: ListStudents :many
+-- name: ListStudentsPage :many
 SELECT * FROM students
 WHERE tenant_id = $1
-ORDER BY last_name, first_name;
+ORDER BY last_name, first_name, id
+LIMIT sqlc.arg('limit')
+OFFSET sqlc.arg('offset');
+
+-- name: ListStudentsCursor :many
+SELECT * FROM students
+WHERE tenant_id = $1
+    AND (
+    sqlc.narg('cursor_last_name')::text IS NULL
+    OR (last_name, first_name, id) > (sqlc.arg('cursor_last_name'), sqlc.arg('cursor_first_name'), sqlc.arg('cursor_id'))
+)
+ORDER BY last_name, first_name, id
+LIMIT sqlc.arg('limit');
 
 
 -- name: CreateParent :one
@@ -62,7 +74,7 @@ LEFT JOIN academic_sessions sess ON sess.id = s.academic_session_id
 WHERE s.id = $1 AND s.tenant_id = $2;
 
 
--- name: SearchStudents :many
+-- name: SearchStudentsPage :many
 SELECT * FROM students
 WHERE tenant_id = $1
     AND (
@@ -71,9 +83,59 @@ WHERE tenant_id = $1
         last_name ILIKE '%' || sqlc.narg('search') || '%' OR
         admission_number ILIKE '%' || sqlc.narg('search') || '%'
     )
-    AND (sqlc.narg('current_class_arm')::uuid IS NULL OR current_class_arm_id = sqlc.narg('current_class_arm'))
-    AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
-ORDER BY last_name, first_name;
+    AND (
+        sqlc.narg('current_class_arm')::uuid IS NULL
+        OR current_class_arm_id = sqlc.narg('current_class_arm')::uuid
+    )
+    AND (
+        sqlc.narg('status')::text IS NULL
+        OR status = sqlc.narg('status')::text
+    )
+ORDER BY last_name, first_name, id
+LIMIT sqlc.arg('limit')
+OFFSET sqlc.arg('offset');
+
+-- name: CountSearchStudents :one
+SELECT COUNT(*) FROM students
+WHERE tenant_id = $1
+    AND (
+        sqlc.narg('search')::text IS NULL OR
+        first_name ILIKE '%' || sqlc.narg('search') || '%' OR 
+        last_name ILIKE '%' || sqlc.narg('search') || '%' OR
+        admission_number ILIKE '%' || sqlc.narg('search') || '%'
+    )
+    AND (
+        sqlc.narg('current_class_arm')::uuid IS NULL
+        OR current_class_arm_id = sqlc.narg('current_class_arm')::uuid
+    )
+    AND (
+        sqlc.narg('status')::text IS NULL
+        OR status = sqlc.narg('status')::text
+);
+
+-- name: SearchStudentsCursor :many
+SELECT * FROM students
+WHERE tenant_id = $1
+    AND (
+        sqlc.narg('search')::text IS NULL OR
+        first_name ILIKE '%' || sqlc.narg('search') || '%' OR 
+        last_name ILIKE '%' || sqlc.narg('search') || '%' OR
+        admission_number ILIKE '%' || sqlc.narg('search') || '%'
+    )
+    AND (
+        sqlc.narg('current_class_arm')::uuid IS NULL
+        OR current_class_arm_id = sqlc.narg('current_class_arm')::uuid
+    )
+    AND (
+        sqlc.narg('status')::text IS NULL
+        OR status = sqlc.narg('status')::text
+    )
+    AND (
+        sqlc.narg('cursor_last_name')::text IS NULL
+        OR (last_name, first_name, id) > (sqlc.narg('cursor_last_name')::text, sqlc.narg('cursor_first_name')::text, sqlc.narg('cursor_id')::uuid)
+    )
+ORDER BY last_name, first_name, id
+LIMIT sqlc.arg('limit');
 
 
 -- name: UpdateStudent :one

@@ -17,7 +17,9 @@ type AcademicRepository interface {
 		startDate time.Time,
 		endDate time.Time,
 		isCurrent bool,
-	) (*store.AcademicSession, apierror.AppError)
+	) (*store.AcademicSession, *apierror.AppError)
+
+	SetAcademicSession(ctx context.Context, tenantId uuid.UUID) error
 }
 
 type AcademicRepositoryImpl struct {
@@ -52,4 +54,8 @@ func (repo *AcademicRepositoryImpl) CreateAcademicSession(
 	}
 
 	return &newAcademicSession, nil
+}
+
+func (repo *AcademicRepositoryImpl) SetAcademicSession(ctx context.Context, tenantId uuid.UUID) error {
+	return repo.queries.SetCurrentAcademicSession(ctx, tenantId)
 }

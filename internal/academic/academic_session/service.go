@@ -18,7 +18,7 @@ import (
 type Service struct {
 	queries            *store.Queries
 	pool               *pgxpool.Pool
-	AcademicRepository *AcademicRepository
+	AcademicRepository AcademicRepository
 }
 
 func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
@@ -41,21 +41,12 @@ func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid
 		return nil, apierror.Validation("end_date cannot be before start_date")
 	}
 	if request.IsCurrent {
-		_ = service.queries.SetCurrentAcademicSession(ctx, tenantId)
+		_ = service.AcademicRepository.SetAcademicSession(ctx, tenantId)
 	}
 
-	session, err := service.queries.CreateAcademicSession(ctx, store.CreateAcademicSessionParams{
-		TenantID:  tenantId,
-		Name:      name,
-		StartDate: startDate,
-		EndDate:   endDate,
-		IsCurrent: request.IsCurrent,
-	})
+	session, err := service.AcademicRepository.CreateAcademicSession(ctx, tenantId, name, startDate, endDate, request.IsCurrent)
 
-	if err != nil {
-		return nil, academic.TranslateAcademicError(err)
-	}
-	return &session, nil
+	return session, err
 }
 
 func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.UUID) ([]store.AcademicSession, error) {

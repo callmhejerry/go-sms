@@ -7,6 +7,7 @@ import (
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
+	"github.com/callmhejerry/sms/internal/shared/utils"
 	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
 )
@@ -79,14 +80,16 @@ func (handler *Handler) GetStudent(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(student)
 }
 
-func (handler *Handler) ListStudents(w http.ResponseWriter, r *http.Request) {
+func (handler *Handler) ListStudentsPage(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r.Context())
 	if claims == nil {
 		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
 		return
 	}
 
-	students, err := handler.service.ListStudents(r.Context(), claims.TenantID)
+	offsetRequest := utils.ParseOffsetPagination(r)
+
+	students, err := handler.service.ListStudentsPage(r.Context(), claims.TenantID, offsetRequest.Page, offsetRequest.PageSize)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -144,20 +147,52 @@ func (handler *Handler) GetStudentProfile(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(studentProfile)
 }
 
-func (handler *Handler) SearchStudents(w http.ResponseWriter, r *http.Request) {
+func (handler *Handler) SearchStudentsPage(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r.Context())
 	if claims == nil {
 		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
 		return
 	}
 
-	var request SearchStudentRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		apierror.WriteError(w, apierror.Validation("invalid request body"), handler.logger)
+	request := parseSearchStudentQuery(r)
+
+	offsetPagination := utils.ParseOffsetPagination(r)
+
+	students, err := handler.service.SearchStudentPage(
+		r.Context(),
+		claims.TenantID,
+		request,
+		offsetPagination.Page,
+		offsetPagination.PageSize,
+	)
+
+	if err != nil {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
-	students, err := handler.service.SearchStudent(r.Context(), claims.TenantID, request)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(students)
+}
+
+func (handler *Handler) SearchStudentsCursor(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+		return
+	}
+
+	request := parseSearchStudentQuery(r)
+
+	cursor := utils.ParseCursorPagination(r)
+
+	students, err := handler.service.SearchStudentCursor(
+		r.Context(),
+		claims.TenantID,
+		request,
+		cursor.PageSize,
+		DecodeListStudentCursor(cursor.Next),
+	)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)

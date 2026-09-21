@@ -12,6 +12,7 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
+	"github.com/callmhejerry/sms/internal/shared/utils"
 	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -158,8 +159,13 @@ func (service *Service) GetStudent(ctx context.Context, tenantId, studentId uuid
 	return &student, nil
 }
 
-func (service *Service) ListStudents(ctx context.Context, tenantId uuid.UUID) ([]store.Student, error) {
-	students, err := service.queries.ListStudents(ctx, tenantId)
+func (service *Service) ListStudentsPage(ctx context.Context, tenantId uuid.UUID, offset, limit int) ([]store.Student, error) {
+
+	students, err := service.queries.ListStudentsPage(ctx, store.ListStudentsPageParams{
+		TenantID: tenantId,
+		Offset:   int32(offset),
+		Limit:    int32(limit),
+	})
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
 	}
@@ -195,9 +201,28 @@ func (service *Service) GetStudentProfile(ctx context.Context, tenantId, student
 	return &studentProfile, nil
 }
 
-func (service *Service) SearchStudent(ctx context.Context, tenantId uuid.UUID, searchRequest SearchStudentRequest) ([]store.Student, error) {
+func (service *Service) SearchStudentPage(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	searchRequest SearchStudentRequest,
+	offset, limit int,
+) (*ListStudentOffsetResponse, error) {
 
-	students, err := service.queries.SearchStudents(ctx, store.SearchStudentsParams{
+	params := store.SearchStudentsPageParams{
+		TenantID:        tenantId,
+		Search:          searchRequest.Query,
+		CurrentClassArm: searchRequest.ClassArmId,
+		Status:          searchRequest.Status,
+		Limit:           int32(limit),
+		Offset:          int32(offset),
+	}
+	students, err := service.queries.SearchStudentsPage(ctx, params)
+
+	if err != nil {
+		return nil, academic.TranslateAcademicError(err)
+	}
+
+	total, err := service.queries.CountSearchStudents(ctx, store.CountSearchStudentsParams{
 		TenantID:        tenantId,
 		Search:          searchRequest.Query,
 		CurrentClassArm: searchRequest.ClassArmId,
@@ -207,7 +232,54 @@ func (service *Service) SearchStudent(ctx context.Context, tenantId uuid.UUID, s
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)
 	}
-	return students, nil
+
+	totalPages := (total + int64(limit) - 1) / int64(limit)
+
+	offsetPagination := utils.OffsetPaginationResponse{
+		Page:       offset,
+		PageSize:   len(students),
+		TotalPages: int(totalPages),
+		Total:      int(total),
+	}
+
+	return &ListStudentOffsetResponse{
+		Data:       students,
+		Pagination: offsetPagination,
+	}, nil
+}
+
+func (service *Service) SearchStudentCursor(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	searchRequest SearchStudentRequest,
+	limit int,
+	cursor ListStudentCursor,
+) (*ListStudentCursorResponse, error) {
+
+	students, err := service.queries.SearchStudentsCursor(ctx, store.SearchStudentsCursorParams{
+		TenantID:        tenantId,
+		Search:          searchRequest.Query,
+		CurrentClassArm: searchRequest.ClassArmId,
+		Status:          searchRequest.Status,
+		Limit:           int32(limit),
+		CursorLastName:  cursor.LastName,
+		CursorFirstName: cursor.FirstName,
+		CursorID:        cursor.ID,
+	})
+
+	if err != nil {
+		return nil, academic.TranslateAcademicError(err)
+	}
+
+	lastStudent := students[len(students)-1]
+
+	return &ListStudentCursorResponse{
+		Data: students,
+		Pagination: utils.CursorPaginationResponse{
+			HasMore: len(students) >= limit,
+			Next:    EncodeListStudentCursor(lastStudent.LastName, lastStudent.FirstName, lastStudent.ID),
+		},
+	}, nil
 }
 
 func (service *Service) UpdateStudent(ctx context.Context, tenantId, studentId uuid.UUID, request UpdateStudentRequest) (*store.Student, error) {
