@@ -32,17 +32,17 @@ type SubjectRepository interface {
 	) (*store.TeacherAssignment, *apierror.AppError)
 }
 
-type SubjectRepositoryImpl struct {
+type subjectRepositoryImpl struct {
 	queries *store.Queries
 }
 
-func NewSubjectRepository(queries *store.Queries) *SubjectRepositoryImpl {
-	return &SubjectRepositoryImpl{
+func NewSubjectRepositoryImpl(queries *store.Queries) SubjectRepository {
+	return &subjectRepositoryImpl{
 		queries: queries,
 	}
 }
 
-func (repo *SubjectRepositoryImpl) CreateSubject(
+func (repo *subjectRepositoryImpl) CreateSubject(
 	ctx context.Context,
 	tenantId uuid.UUID,
 	name, code string,
@@ -61,7 +61,7 @@ func (repo *SubjectRepositoryImpl) CreateSubject(
 	return &subject, nil
 }
 
-func (repo *SubjectRepositoryImpl) ListSubjects(
+func (repo *subjectRepositoryImpl) ListSubjects(
 	ctx context.Context,
 	tenantId uuid.UUID,
 ) ([]store.Subject, *apierror.AppError) {
@@ -73,7 +73,7 @@ func (repo *SubjectRepositoryImpl) ListSubjects(
 	return subject, nil
 }
 
-func (repo *SubjectRepositoryImpl) AddSubjectToClass(
+func (repo *subjectRepositoryImpl) AddSubjectToClass(
 	ctx context.Context,
 	tenantId, classId, subjectId uuid.UUID,
 ) (*store.ClassSubject, *apierror.AppError) {
@@ -90,7 +90,7 @@ func (repo *SubjectRepositoryImpl) AddSubjectToClass(
 	return &classSubject, nil
 }
 
-func (repo *SubjectRepositoryImpl) AssignTeacherToSubject(
+func (repo *subjectRepositoryImpl) AssignTeacherToSubject(
 	ctx context.Context,
 	tenantId, userId, subjectId, academicSessionId, classId uuid.UUID,
 	class_arm_id *uuid.UUID,

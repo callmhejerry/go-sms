@@ -13,9 +13,9 @@ type SubjectService struct {
 	subjectRepository SubjectRepository
 }
 
-func NewSubjectService(subjectRepository *SubjectRepository) *SubjectService {
+func NewSubjectService(subjectRepository SubjectRepository) *SubjectService {
 	return &SubjectService{
-		subjectRepository: *subjectRepository,
+		subjectRepository: subjectRepository,
 	}
 }
 

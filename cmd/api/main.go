@@ -15,6 +15,7 @@ import (
 	"github.com/callmhejerry/sms/internal/academic/student"
 	"github.com/callmhejerry/sms/internal/admission"
 	"github.com/callmhejerry/sms/internal/billing"
+	"github.com/callmhejerry/sms/internal/grading/subjects"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/config"
@@ -59,6 +60,7 @@ func main() {
 
 	// repositories
 	billingRespository := billing.NewBillingRepositoryImpl(queries)
+	subjectRepository := subjects.NewSubjectRepositoryImpl(queries)
 
 	// Services
 	tenantService := tenant.NewService(pool, queries)
@@ -69,6 +71,7 @@ func main() {
 
 	admissionService := admission.NewService(queries, studentService, academicSessionService, classService)
 	billingService := billing.NewBillingService(billingRespository)
+	subjectService := subjects.NewSubjectService(subjectRepository)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log, appValidator)
@@ -78,6 +81,7 @@ func main() {
 	admissionHandler := admission.NewHandler(admissionService, log, appValidator)
 	studentHandler := student.NewHandler(studentService, log, appValidator)
 	billingHandler := billing.NewBillingHandler(billingService, log, appValidator)
+	subjectHandler := subjects.NewHandler(subjectService, log, appValidator)
 
 	handlers := server.Handlers{
 		Tenant:          tenantHandler,
@@ -87,6 +91,7 @@ func main() {
 		Classes:         classHandler,
 		Student:         studentHandler,
 		Billing:         billingHandler,
+		Subject:         subjectHandler,
 	}
 
 	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)

@@ -14,3 +14,8 @@ type AssignTeacherRequest struct {
 	ClassID           uuid.UUID  `json:"class_id" validate:"required,uuid"`
 	ClassArmID        *uuid.UUID `json:"class_arm_id,omitempty"` // optional
 }
+
+type AddSubjectToClassRequest struct {
+	ClassID   uuid.UUID `json:"class_id" validate:"required,uuid"`
+	SubjectID uuid.UUID `json:"subject_id" validate:"required,uuid"`
+}

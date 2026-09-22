@@ -78,18 +78,18 @@ type BillingRepository interface {
 	) ([]store.ListOutstandingFeesRow, *apierror.AppError)
 }
 
-type BillingRepositoryImpl struct {
+type billingRepositoryImpl struct {
 	queries *store.Queries
 	pool    *pgxpool.Pool
 }
 
-func NewBillingRepositoryImpl(queries *store.Queries) *BillingRepositoryImpl {
-	return &BillingRepositoryImpl{
+func NewBillingRepositoryImpl(queries *store.Queries) BillingRepository {
+	return &billingRepositoryImpl{
 		queries: queries,
 	}
 }
 
-func (repo *BillingRepositoryImpl) CreateFeeType(
+func (repo *billingRepositoryImpl) CreateFeeType(
 	ctx context.Context,
 	tenantId uuid.UUID,
 	name, description string,
@@ -109,7 +109,7 @@ func (repo *BillingRepositoryImpl) CreateFeeType(
 	return &fee_type, nil
 }
 
-func (repo *BillingRepositoryImpl) ListFeeTypes(
+func (repo *billingRepositoryImpl) ListFeeTypes(
 	ctx context.Context,
 	tenantId uuid.UUID,
 ) ([]store.FeeType, *apierror.AppError) {
@@ -123,7 +123,7 @@ func (repo *BillingRepositoryImpl) ListFeeTypes(
 	return fee_types, nil
 }
 
-func (repo *BillingRepositoryImpl) CreateFeeStructure(
+func (repo *billingRepositoryImpl) CreateFeeStructure(
 	ctx context.Context,
 	tenantId, feeTypeId, academicSessionId uuid.UUID,
 	classId *uuid.UUID,
@@ -145,7 +145,7 @@ func (repo *BillingRepositoryImpl) CreateFeeStructure(
 	return &fee_structure, nil
 }
 
-func (repo *BillingRepositoryImpl) ListFeeStructures(
+func (repo *billingRepositoryImpl) ListFeeStructures(
 	ctx context.Context,
 	tenantId uuid.UUID,
 ) ([]store.ListFeeStructuresRow, *apierror.AppError) {
@@ -157,7 +157,7 @@ func (repo *BillingRepositoryImpl) ListFeeStructures(
 	return fee_structures, nil
 }
 
-func (repo *BillingRepositoryImpl) ListFeeStructuresByAcademicSession(
+func (repo *billingRepositoryImpl) ListFeeStructuresByAcademicSession(
 	ctx context.Context,
 	tenantId uuid.UUID,
 	academicSessionId uuid.UUID,
@@ -174,7 +174,7 @@ func (repo *BillingRepositoryImpl) ListFeeStructuresByAcademicSession(
 	return fee_structures, nil
 }
 
-func (repo *BillingRepositoryImpl) AssignFeesToStudent(
+func (repo *billingRepositoryImpl) AssignFeesToStudent(
 	ctx context.Context,
 	tenantId, studentId uuid.UUID,
 	fee_structures []uuid.UUID,
@@ -212,7 +212,7 @@ func (repo *BillingRepositoryImpl) AssignFeesToStudent(
 	return created, nil
 }
 
-func (repo *BillingRepositoryImpl) ListStudentFees(
+func (repo *billingRepositoryImpl) ListStudentFees(
 	ctx context.Context,
 	tenantId, studentId uuid.UUID,
 ) ([]store.ListStudentFeesRow, *apierror.AppError) {
@@ -228,7 +228,7 @@ func (repo *BillingRepositoryImpl) ListStudentFees(
 	return studentFees, nil
 }
 
-func (repo *BillingRepositoryImpl) RecordPayment(
+func (repo *billingRepositoryImpl) RecordPayment(
 	ctx context.Context,
 	tenantId, receivedBy uuid.UUID,
 	request RecordPaymentRequest,
@@ -291,7 +291,7 @@ func (repo *BillingRepositoryImpl) RecordPayment(
 	return &payment, nil
 }
 
-func (repo *BillingRepositoryImpl) ListStudentPayments(
+func (repo *billingRepositoryImpl) ListStudentPayments(
 	ctx context.Context,
 	tenantId, studentId uuid.UUID,
 ) ([]store.Payment, *apierror.AppError) {
@@ -306,7 +306,7 @@ func (repo *BillingRepositoryImpl) ListStudentPayments(
 	return payments, nil
 }
 
-func (repo *BillingRepositoryImpl) GetStudentFeeSummary(
+func (repo *billingRepositoryImpl) GetStudentFeeSummary(
 	ctx context.Context,
 	tenantId, studentId uuid.UUID,
 ) (*store.GetStudentFeeSummaryRow, *apierror.AppError) {
@@ -321,7 +321,7 @@ func (repo *BillingRepositoryImpl) GetStudentFeeSummary(
 	return &summary, nil
 }
 
-func (repo *BillingRepositoryImpl) ListOutstandingFees(
+func (repo *billingRepositoryImpl) ListOutstandingFees(
 	ctx context.Context,
 	tenantId uuid.UUID,
 ) ([]store.ListOutstandingFeesRow, *apierror.AppError) {
@@ -333,7 +333,7 @@ func (repo *BillingRepositoryImpl) ListOutstandingFees(
 	return outstandingFees, nil
 }
 
-func (repo *BillingRepositoryImpl) ListStudentOutstandingFees(
+func (repo *billingRepositoryImpl) ListStudentOutstandingFees(
 	ctx context.Context,
 	tenantId, studentId uuid.UUID,
 ) ([]store.ListOutstandingFeesByStudentRow, *apierror.AppError) {
