@@ -65,6 +65,14 @@ type ClassArm struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ClassSubject struct {
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
+	ClassID   uuid.UUID          `json:"class_id"`
+	SubjectID uuid.UUID          `json:"subject_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type FeeStructure struct {
 	ID                uuid.UUID          `json:"id"`
 	TenantID          uuid.UUID          `json:"tenant_id"`
@@ -163,6 +171,26 @@ type StudentParent struct {
 	Relationship string             `json:"relationship"`
 	IsPrimary    bool               `json:"is_primary"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type Subject struct {
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
+	Name      string             `json:"name"`
+	Code      string             `json:"code"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TeacherAssignment struct {
+	ID                uuid.UUID          `json:"id"`
+	TenantID          uuid.UUID          `json:"tenant_id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	SubjectID         uuid.UUID          `json:"subject_id"`
+	AcademicSessionID uuid.UUID          `json:"academic_session_id"`
+	ClassID           uuid.UUID          `json:"class_id"`
+	ClassArmID        *uuid.UUID         `json:"class_arm_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 }
 
 type Tenant struct {
