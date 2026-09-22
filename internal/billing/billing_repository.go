@@ -62,6 +62,20 @@ type BillingRepository interface {
 		ctx context.Context,
 		tenantId, studentId uuid.UUID,
 	) ([]store.Payment, *apierror.AppError)
+
+	GetStudentFeeSummary(
+		ctx context.Context, tenantId, studentId uuid.UUID,
+	) (*store.GetStudentFeeSummaryRow, *apierror.AppError)
+
+	ListStudentOutstandingFees(
+		ctx context.Context,
+		tenantId, studentId uuid.UUID,
+	) ([]store.ListOutstandingFeesByStudentRow, *apierror.AppError)
+
+	ListOutstandingFees(
+		ctx context.Context,
+		tenantId uuid.UUID,
+	) ([]store.ListOutstandingFeesRow, *apierror.AppError)
 }
 
 type BillingRepositoryImpl struct {
@@ -290,4 +304,46 @@ func (repo *BillingRepositoryImpl) ListStudentPayments(
 		return nil, translatePaymentsError(err)
 	}
 	return payments, nil
+}
+
+func (repo *BillingRepositoryImpl) GetStudentFeeSummary(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) (*store.GetStudentFeeSummaryRow, *apierror.AppError) {
+	summary, err := repo.queries.GetStudentFeeSummary(ctx, store.GetStudentFeeSummaryParams{
+		TenantID:  tenantId,
+		StudentID: studentId,
+	})
+
+	if err != nil {
+		return nil, translateStudentFeesError(err)
+	}
+	return &summary, nil
+}
+
+func (repo *BillingRepositoryImpl) ListOutstandingFees(
+	ctx context.Context,
+	tenantId uuid.UUID,
+) ([]store.ListOutstandingFeesRow, *apierror.AppError) {
+
+	outstandingFees, err := repo.queries.ListOutstandingFees(ctx, tenantId)
+	if err != nil {
+		return nil, translateStudentFeesError(err)
+	}
+	return outstandingFees, nil
+}
+
+func (repo *BillingRepositoryImpl) ListStudentOutstandingFees(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) ([]store.ListOutstandingFeesByStudentRow, *apierror.AppError) {
+	outstandingFees, err := repo.queries.ListOutstandingFeesByStudent(ctx, store.ListOutstandingFeesByStudentParams{
+		TenantID:  tenantId,
+		StudentID: studentId,
+	})
+
+	if err != nil {
+		return nil, translateStudentFeesError(err)
+	}
+	return outstandingFees, nil
 }

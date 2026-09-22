@@ -259,6 +259,33 @@ func (q *Queries) GetStudentFeeByID(ctx context.Context, arg GetStudentFeeByIDPa
 	return i, err
 }
 
+const getStudentFeeSummary = `-- name: GetStudentFeeSummary :one
+SELECT 
+    COALESCE(SUM(amount_kobo), 0) AS total_amount,
+    COALESCE(SUM(amount_paid_kobo), 0) AS total_paid,
+    COALESCE(SUM(amount_kobo - amount_paid_kobo), 0) AS balance
+FROM student_fees
+WHERE tenant_id = $1 AND student_id = $2
+`
+
+type GetStudentFeeSummaryParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	StudentID uuid.UUID `json:"student_id"`
+}
+
+type GetStudentFeeSummaryRow struct {
+	TotalAmount interface{} `json:"total_amount"`
+	TotalPaid   interface{} `json:"total_paid"`
+	Balance     interface{} `json:"balance"`
+}
+
+func (q *Queries) GetStudentFeeSummary(ctx context.Context, arg GetStudentFeeSummaryParams) (GetStudentFeeSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getStudentFeeSummary, arg.TenantID, arg.StudentID)
+	var i GetStudentFeeSummaryRow
+	err := row.Scan(&i.TotalAmount, &i.TotalPaid, &i.Balance)
+	return i, err
+}
+
 const listFeeStructures = `-- name: ListFeeStructures :many
 SELECT fs.id, fs.tenant_id, fs.fee_type_id, fs.academic_session_id, fs.class_id, fs.amount_kobo, fs.due_date, fs.created_at, fs.updated_at, ft.name AS fee_type_name
 FROM fee_structures fs
@@ -390,6 +417,137 @@ func (q *Queries) ListFeeTypes(ctx context.Context, tenantID uuid.UUID) ([]FeeTy
 			&i.IsOptional,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOutstandingFees = `-- name: ListOutstandingFees :many
+SELECT
+    sf.id, sf.tenant_id, sf.student_id, sf.fee_structure_id, sf.amount_kobo, sf.amount_paid_kobo, sf.status, sf.due_date, sf.created_at, sf.updated_at,
+    s.admission_number,
+    s.first_name,
+    s.last_name,
+    ft.name AS fee_type_name
+FROM student_fees sf
+JOIN students s ON s.id = sf.student_id
+JOIN fee_structures fs ON fs.id = sf.fee_structure_id
+JOIN fee_types ft ON ft.id = sf.fee_type_id
+WHERE sf.tenant_id = $1 AND sf.status IN ('unpaid', 'partial')
+ORDER BY s.last_name, s.first_name, ft.name
+`
+
+type ListOutstandingFeesRow struct {
+	ID              uuid.UUID          `json:"id"`
+	TenantID        uuid.UUID          `json:"tenant_id"`
+	StudentID       uuid.UUID          `json:"student_id"`
+	FeeStructureID  uuid.UUID          `json:"fee_structure_id"`
+	AmountKobo      int64              `json:"amount_kobo"`
+	AmountPaidKobo  int64              `json:"amount_paid_kobo"`
+	Status          string             `json:"status"`
+	DueDate         *time.Time         `json:"due_date"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	AdmissionNumber string             `json:"admission_number"`
+	FirstName       string             `json:"first_name"`
+	LastName        string             `json:"last_name"`
+	FeeTypeName     string             `json:"fee_type_name"`
+}
+
+func (q *Queries) ListOutstandingFees(ctx context.Context, tenantID uuid.UUID) ([]ListOutstandingFeesRow, error) {
+	rows, err := q.db.Query(ctx, listOutstandingFees, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOutstandingFeesRow{}
+	for rows.Next() {
+		var i ListOutstandingFeesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.StudentID,
+			&i.FeeStructureID,
+			&i.AmountKobo,
+			&i.AmountPaidKobo,
+			&i.Status,
+			&i.DueDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AdmissionNumber,
+			&i.FirstName,
+			&i.LastName,
+			&i.FeeTypeName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOutstandingFeesByStudent = `-- name: ListOutstandingFeesByStudent :many
+SELECT 
+    sf.id, sf.tenant_id, sf.student_id, sf.fee_structure_id, sf.amount_kobo, sf.amount_paid_kobo, sf.status, sf.due_date, sf.created_at, sf.updated_at,
+    ft.name AS fee_type_name
+FROM student_fees sf
+JOIN fee_structures fs ON fs.id = sf.fee_structure_id
+JOIN fee_types ft ON ft.id = fs.fee_type_id
+WHERE sf.tenant_id = $1 
+  AND sf.student_id = $2
+  AND sf.status IN ('unpaid', 'partial')
+ORDER BY ft.name
+`
+
+type ListOutstandingFeesByStudentParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	StudentID uuid.UUID `json:"student_id"`
+}
+
+type ListOutstandingFeesByStudentRow struct {
+	ID             uuid.UUID          `json:"id"`
+	TenantID       uuid.UUID          `json:"tenant_id"`
+	StudentID      uuid.UUID          `json:"student_id"`
+	FeeStructureID uuid.UUID          `json:"fee_structure_id"`
+	AmountKobo     int64              `json:"amount_kobo"`
+	AmountPaidKobo int64              `json:"amount_paid_kobo"`
+	Status         string             `json:"status"`
+	DueDate        *time.Time         `json:"due_date"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	FeeTypeName    string             `json:"fee_type_name"`
+}
+
+func (q *Queries) ListOutstandingFeesByStudent(ctx context.Context, arg ListOutstandingFeesByStudentParams) ([]ListOutstandingFeesByStudentRow, error) {
+	rows, err := q.db.Query(ctx, listOutstandingFeesByStudent, arg.TenantID, arg.StudentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOutstandingFeesByStudentRow{}
+	for rows.Next() {
+		var i ListOutstandingFeesByStudentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.StudentID,
+			&i.FeeStructureID,
+			&i.AmountKobo,
+			&i.AmountPaidKobo,
+			&i.Status,
+			&i.DueDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FeeTypeName,
 		); err != nil {
 			return nil, err
 		}

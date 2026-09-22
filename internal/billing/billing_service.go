@@ -148,3 +148,23 @@ func (service *BillingService) ListStudentPayments(
 		studentId,
 	)
 }
+
+func (service *BillingService) GetStudentFeeSummary(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) (*store.GetStudentFeeSummaryRow, *apierror.AppError) {
+	return service.billingRepository.GetStudentFeeSummary(ctx, tenantId, studentId)
+}
+
+func (service *BillingService) ListOutstandingFees(
+	ctx context.Context, tenantId uuid.UUID,
+) ([]store.ListOutstandingFeesRow, *apierror.AppError) {
+	return service.billingRepository.ListOutstandingFees(ctx, tenantId)
+}
+
+func (service *BillingService) ListStudentOutstandingFees(
+	ctx context.Context,
+	tenantId, studentId uuid.UUID,
+) ([]store.ListOutstandingFeesByStudentRow, *apierror.AppError) {
+	return service.billingRepository.ListStudentOutstandingFees(ctx, tenantId, studentId)
+}

@@ -105,3 +105,40 @@ RETURNING *;
 SELECT * FROM payments
 WHERE tenant_id = $1 AND student_id = $2
 ORDER BY paid_at DESC;
+
+
+-- name: GetStudentFeeSummary :one
+SELECT 
+    COALESCE(SUM(amount_kobo), 0) AS total_amount,
+    COALESCE(SUM(amount_paid_kobo), 0) AS total_paid,
+    COALESCE(SUM(amount_kobo - amount_paid_kobo), 0) AS balance
+FROM student_fees
+WHERE tenant_id = $1 AND student_id = $2;
+
+
+-- name: ListOutstandingFees :many
+SELECT
+    sf.*,
+    s.admission_number,
+    s.first_name,
+    s.last_name,
+    ft.name AS fee_type_name
+FROM student_fees sf
+JOIN students s ON s.id = sf.student_id
+JOIN fee_structures fs ON fs.id = sf.fee_structure_id
+JOIN fee_types ft ON ft.id = sf.fee_type_id
+WHERE sf.tenant_id = $1 AND sf.status IN ('unpaid', 'partial')
+ORDER BY s.last_name, s.first_name, ft.name;
+
+
+-- name: ListOutstandingFeesByStudent :many
+SELECT 
+    sf.*,
+    ft.name AS fee_type_name
+FROM student_fees sf
+JOIN fee_structures fs ON fs.id = sf.fee_structure_id
+JOIN fee_types ft ON ft.id = fs.fee_type_id
+WHERE sf.tenant_id = $1 
+  AND sf.student_id = $2
+  AND sf.status IN ('unpaid', 'partial')
+ORDER BY ft.name;

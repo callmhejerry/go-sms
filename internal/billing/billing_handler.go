@@ -254,3 +254,43 @@ func (h *BillingHandler) ListStudentPayments(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(payments)
 }
+
+func (h *BillingHandler) GetStudentFeeSummary(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	studentID, err := uuid.Parse(r.PathValue("student_id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid student id"), h.logger)
+		return
+	}
+
+	summary, err := h.billingService.GetStudentFeeSummary(r.Context(), claims.TenantID, studentID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summary)
+}
+
+func (h *BillingHandler) ListOutstandingFees(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	fees, err := h.billingService.ListOutstandingFees(r.Context(), claims.TenantID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(fees)
+}

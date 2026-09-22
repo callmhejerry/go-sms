@@ -105,6 +105,8 @@ func New(
 	// Student Fees
 	protectedMux.HandleFunc("POST /api/v1/student-fees/assign", handlers.Billing.AssignFeesToStudent)
 	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/fees", handlers.Billing.ListStudentFees)
+	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/fees/summary", handlers.Billing.GetStudentFeeSummary)
+	protectedMux.HandleFunc("GET /api/v1/fees/outstanding", handlers.Billing.ListOutstandingFees)
 
 	// Payments
 	protectedMux.HandleFunc("POST /api/v1/payments", handlers.Billing.RecordPayment)
