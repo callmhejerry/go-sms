@@ -7,6 +7,7 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 type GradingService struct {
@@ -49,4 +50,48 @@ func (service *GradingService) ListAssessmentTypes(
 	tenantId uuid.UUID,
 ) ([]store.AssessmentType, *apierror.AppError) {
 	return service.gradingRepository.ListAssessmentTypes(ctx, tenantId)
+}
+
+func (service *GradingService) RecordStudentScore(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	recordedBy *uuid.UUID,
+	request RecordScoreRequest,
+) (*store.Score, *apierror.AppError) {
+	score := decimal.NewFromFloat(request.Score)
+
+	assessment, err := service.gradingRepository.GetAssessmentTypeById(
+		ctx, tenantId,
+		request.AssessmentTypeID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	maxScore := assessment.MaxScore
+
+	if score.GreaterThan(maxScore) {
+		return nil, ErrScoreGreaterThanMaxScore
+	}
+
+	return service.gradingRepository.RecordScore(
+		ctx, tenantId,
+		request.StudentID,
+		request.SubjectID,
+		request.AcademicSessionID,
+		request.ClassArmID,
+		request.AssessmentTypeID,
+		request.Score,
+		recordedBy,
+	)
+}
+
+func (service *GradingService) GetStudentScores(
+	ctx context.Context,
+	tenantId,
+	studentId,
+	academicSessionId uuid.UUID,
+) ([]store.GetScoresByStudentRow, *apierror.AppError) {
+	return service.GetStudentScores(ctx, tenantId, studentId, academicSessionId)
 }

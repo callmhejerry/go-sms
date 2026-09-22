@@ -148,6 +148,20 @@ type Role struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Score struct {
+	ID                uuid.UUID          `json:"id"`
+	TenantID          uuid.UUID          `json:"tenant_id"`
+	StudentID         uuid.UUID          `json:"student_id"`
+	SubjectID         uuid.UUID          `json:"subject_id"`
+	AssessmentTypeID  uuid.UUID          `json:"assessment_type_id"`
+	ClassArmID        uuid.UUID          `json:"class_arm_id"`
+	AcademicSessionID uuid.UUID          `json:"academic_session_id"`
+	Score             decimal.Decimal    `json:"score"`
+	RecordedBy        *uuid.UUID         `json:"recorded_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Student struct {
 	ID                 uuid.UUID          `json:"id"`
 	TenantID           uuid.UUID          `json:"tenant_id"`
