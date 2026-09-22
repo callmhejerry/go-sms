@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 type AcademicSession struct {
@@ -45,6 +46,17 @@ type Admission struct {
 	ParentRelationship string             `json:"parent_relationship"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AssessmentType struct {
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
+	Name      string             `json:"name"`
+	MaxScore  decimal.Decimal    `json:"max_score"`
+	Weight    *decimal.Decimal   `json:"weight"`
+	IsExam    bool               `json:"is_exam"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Class struct {

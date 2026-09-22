@@ -33,3 +33,27 @@ sql:
             go_type:
               type: "time.Time"
               pointer: true
+
+          - db_type: "numeric"
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+
+          - db_type: "numeric"
+            nullable: true
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+              pointer: true
+
+          - db_type: "pg_catalog.numeric"
+            nullable: true
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+              pointer: true

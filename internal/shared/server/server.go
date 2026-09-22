@@ -11,6 +11,7 @@ import (
 	"github.com/callmhejerry/sms/internal/academic/student"
 	"github.com/callmhejerry/sms/internal/admission"
 	"github.com/callmhejerry/sms/internal/billing"
+	"github.com/callmhejerry/sms/internal/grading/grading"
 	"github.com/callmhejerry/sms/internal/grading/subjects"
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/shared/auth"
@@ -33,6 +34,7 @@ type Handlers struct {
 	Student         *student.Handler
 	Billing         *billing.BillingHandler
 	Subject         *subjects.SubjectHandler
+	Grading         *grading.GradingHandler
 }
 
 func New(
@@ -121,6 +123,10 @@ func New(
 
 	// Teacher assignments
 	protectedMux.HandleFunc("POST /api/v1/teacher-assignments", handlers.Subject.AssignTeacher)
+
+	// assessment types
+	protectedMux.HandleFunc("POST /api/v1/assessment-types", handlers.Grading.CreateAssessmentType)
+	protectedMux.HandleFunc("GET /api/v1/assessment-types", handlers.Grading.ListAssessmentTypes)
 
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
