@@ -139,6 +139,22 @@ type PaymentAllocation struct {
 	AmountKobo   int64     `json:"amount_kobo"`
 }
 
+type Result struct {
+	ID                uuid.UUID          `json:"id"`
+	TenantID          uuid.UUID          `json:"tenant_id"`
+	StudentID         uuid.UUID          `json:"student_id"`
+	SubjectID         uuid.UUID          `json:"subject_id"`
+	ClassArmID        uuid.UUID          `json:"class_arm_id"`
+	AcademicSessionID uuid.UUID          `json:"academic_session_id"`
+	TotalScore        decimal.Decimal    `json:"total_score"`
+	MaxTotal          decimal.Decimal    `json:"max_total"`
+	Percentage        decimal.Decimal    `json:"percentage"`
+	Grade             *string            `json:"grade"`
+	Remark            *string            `json:"remark"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID          uuid.UUID          `json:"id"`
 	TenantID    uuid.UUID          `json:"tenant_id"`

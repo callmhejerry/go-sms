@@ -128,6 +128,10 @@ func New(
 	protectedMux.HandleFunc("POST /api/v1/assessment-types", handlers.Grading.CreateAssessmentType)
 	protectedMux.HandleFunc("GET /api/v1/assessment-types", handlers.Grading.ListAssessmentTypes)
 
+	// Results
+	protectedMux.HandleFunc("POST /api/v1/results/compute", handlers.Grading.ComputeResults)
+	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/results", handlers.Grading.GetStudentResults)
+
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
 	mux.Handle("/", protectedHandler)

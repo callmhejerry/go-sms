@@ -95,3 +95,102 @@ func (service *GradingService) GetStudentScores(
 ) ([]store.GetScoresByStudentRow, *apierror.AppError) {
 	return service.GetStudentScores(ctx, tenantId, studentId, academicSessionId)
 }
+
+func (service *GradingService) ComputeResults(
+	ctx context.Context, tenantId uuid.UUID,
+	request ComputeResultsRequest,
+) (int, *apierror.AppError) {
+	scores, err := service.gradingRepository.GetScoresForComputation(
+		ctx, tenantId, request.ClassArmID, request.AcademicSessionID,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	type key struct {
+		StudentID  uuid.UUID
+		SubjectID  uuid.UUID
+		ClassArmID uuid.UUID
+	}
+
+	type agg struct {
+		TotalScore decimal.Decimal
+		MaxTotal   decimal.Decimal
+	}
+
+	grouped := make(map[key]*agg)
+
+	for _, score := range scores {
+		k := key{
+			StudentID:  score.StudentID,
+			SubjectID:  score.SubjectID,
+			ClassArmID: score.ClassArmID,
+		}
+
+		if _, exists := grouped[k]; !exists {
+			grouped[k] = &agg{
+				TotalScore: decimal.Zero,
+				MaxTotal:   decimal.Zero,
+			}
+		}
+
+		grouped[k].TotalScore = grouped[k].TotalScore.Add(score.Score)
+		grouped[k].MaxTotal = grouped[k].MaxTotal.Add(score.MaxScore)
+	}
+
+	count := 0
+
+	for k, a := range grouped {
+		var percentage decimal.Decimal
+		if a.MaxTotal.GreaterThan(decimal.Zero) {
+			percentage = (a.TotalScore.Div(a.MaxTotal)).Mul(decimal.NewFromInt(100)).Round(2)
+		}
+
+		grade, remark := calculateGrade(percentage)
+
+		_, err := service.gradingRepository.UpsertResult(
+			ctx, tenantId, CreateResultRequest{
+				StudentID:         k.StudentID,
+				SubjectID:         k.SubjectID,
+				ClassArmID:        k.ClassArmID,
+				AcademicSessionID: request.AcademicSessionID,
+				TotalScore:        a.TotalScore,
+				MaxTotal:          a.MaxTotal,
+				Percentage:        percentage,
+				Grade:             &grade,
+				Remark:            &remark,
+			},
+		)
+		if err != nil {
+			return 0, err
+		}
+		count++
+	}
+	return count, nil
+}
+
+func (service *GradingService) GetStudentResults(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	request GetStudentResultRequest,
+) ([]store.GetResultsByStudentRow, *apierror.AppError) {
+	return service.gradingRepository.GetStudentResults(ctx, tenantId, request)
+}
+
+func calculateGrade(percentage decimal.Decimal) (string, string) {
+	p, _ := percentage.Float64()
+
+	switch {
+	case p >= 70:
+		return "A", "Excellent"
+	case p >= 60:
+		return "B", "Very Good"
+	case p >= 50:
+		return "C", "Good"
+	case p >= 40:
+		return "D", "Fair"
+	default:
+		return "F", "Fail"
+	}
+}

@@ -52,6 +52,25 @@ type GradingRepository interface {
 		assessmentTypeId,
 		academicSessionId uuid.UUID,
 	) ([]store.GetScoresByClassArmAndSubjectRow, *apierror.AppError)
+
+	GetScoresForComputation(
+		ctx context.Context,
+		tenantId,
+		classArmId,
+		academicSessionId uuid.UUID,
+	) ([]store.GetScoresForComputationRow, *apierror.AppError)
+
+	UpsertResult(
+		ctx context.Context,
+		tenantId uuid.UUID,
+		request CreateResultRequest,
+	) (*store.Result, *apierror.AppError)
+
+	GetStudentResults(
+		ctx context.Context,
+		tenantId uuid.UUID,
+		request GetStudentResultRequest,
+	) ([]store.GetResultsByStudentRow, *apierror.AppError)
 }
 
 type gradingRepositoryImpl struct {
@@ -190,4 +209,64 @@ func (repo *gradingRepositoryImpl) GetAssessmentTypeById(
 		return nil, translateAssessmentTypeError(err)
 	}
 	return &assessmentType, nil
+}
+
+func (repo *gradingRepositoryImpl) GetScoresForComputation(
+	ctx context.Context,
+	tenantId,
+	classArmId,
+	academicSessionId uuid.UUID,
+) ([]store.GetScoresForComputationRow, *apierror.AppError) {
+	scores, err := repo.queries.GetScoresForComputation(
+		ctx, store.GetScoresForComputationParams{
+			TenantID:          tenantId,
+			ClassArmID:        classArmId,
+			AcademicSessionID: academicSessionId,
+		},
+	)
+	if err != nil {
+		return nil, translateScoresTypeError(err)
+	}
+	return scores, nil
+}
+
+func (repo *gradingRepositoryImpl) UpsertResult(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	request CreateResultRequest,
+) (*store.Result, *apierror.AppError) {
+	result, err := repo.queries.UpsertResult(ctx, store.UpsertResultParams{
+		TenantID:          tenantId,
+		StudentID:         request.StudentID,
+		SubjectID:         request.SubjectID,
+		ClassArmID:        request.ClassArmID,
+		AcademicSessionID: request.AcademicSessionID,
+		TotalScore:        request.TotalScore,
+		MaxTotal:          request.TotalScore,
+		Percentage:        request.Percentage,
+		Grade:             request.Grade,
+		Remark:            request.Remark,
+	})
+
+	if err != nil {
+		return nil, translateScoresTypeError(err)
+	}
+	return &result, nil
+}
+
+func (repo *gradingRepositoryImpl) GetStudentResults(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	request GetStudentResultRequest,
+) ([]store.GetResultsByStudentRow, *apierror.AppError) {
+	rows, err := repo.queries.GetResultsByStudent(ctx, store.GetResultsByStudentParams{
+		TenantID:          tenantId,
+		StudentID:         request.StudentID,
+		AcademicSessionID: request.AcademicSessionID,
+	})
+
+	if err != nil {
+		return nil, translateScoresTypeError(err)
+	}
+	return rows, nil
 }
