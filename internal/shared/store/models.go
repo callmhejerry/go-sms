@@ -107,6 +107,29 @@ type FeeType struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type InventoryCategory struct {
+	ID        uuid.UUID          `json:"id"`
+	TenantID  uuid.UUID          `json:"tenant_id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type InventoryItem struct {
+	ID              uuid.UUID          `json:"id"`
+	TenantID        uuid.UUID          `json:"tenant_id"`
+	CategoryID      *uuid.UUID         `json:"category_id"`
+	Name            string             `json:"name"`
+	Code            *string            `json:"code"`
+	Description     *string            `json:"description"`
+	Unit            string             `json:"unit"`
+	QuantityInStock int32              `json:"quantity_in_stock"`
+	ReorderLevel    int32              `json:"reorder_level"`
+	UnitCostKobo    *int64             `json:"unit_cost_kobo"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Parent struct {
 	ID          uuid.UUID          `json:"id"`
 	TenantID    uuid.UUID          `json:"tenant_id"`
