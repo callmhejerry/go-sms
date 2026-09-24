@@ -47,6 +47,12 @@ type InventoryRepository interface {
 		tenantId uuid.UUID,
 		itemId uuid.UUID,
 	) ([]store.StockMovement, *apierror.AppError)
+
+	CreateIssuance(
+		ctx context.Context,
+		tenantId, issuedById uuid.UUID,
+		request CreateIssuanceRequest,
+	) (*store.InventoryIssuance, *apierror.AppError)
 }
 
 type inventoryRepositoryImpl struct {
