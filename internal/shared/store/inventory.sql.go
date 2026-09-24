@@ -86,6 +86,52 @@ func (q *Queries) CreateInventoryItem(ctx context.Context, arg CreateInventoryIt
 	return i, err
 }
 
+const createStockMovement = `-- name: CreateStockMovement :one
+INSERT INTO stock_movements (
+    tenant_id, item_id, movement_type, quantity, reason, reference, performed_by, notes
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING id, tenant_id, item_id, movement_type, quantity, reason, reference, performed_by, notes, created_at
+`
+
+type CreateStockMovementParams struct {
+	TenantID     uuid.UUID  `json:"tenant_id"`
+	ItemID       uuid.UUID  `json:"item_id"`
+	MovementType string     `json:"movement_type"`
+	Quantity     int32      `json:"quantity"`
+	Reason       *string    `json:"reason"`
+	Reference    *string    `json:"reference"`
+	PerformedBy  *uuid.UUID `json:"performed_by"`
+	Notes        *string    `json:"notes"`
+}
+
+func (q *Queries) CreateStockMovement(ctx context.Context, arg CreateStockMovementParams) (StockMovement, error) {
+	row := q.db.QueryRow(ctx, createStockMovement,
+		arg.TenantID,
+		arg.ItemID,
+		arg.MovementType,
+		arg.Quantity,
+		arg.Reason,
+		arg.Reference,
+		arg.PerformedBy,
+		arg.Notes,
+	)
+	var i StockMovement
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.ItemID,
+		&i.MovementType,
+		&i.Quantity,
+		&i.Reason,
+		&i.Reference,
+		&i.PerformedBy,
+		&i.Notes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getInventoryItemByID = `-- name: GetInventoryItemByID :one
 SELECT id, tenant_id, category_id, name, code, description, unit, quantity_in_stock, reorder_level, unit_cost_kobo, created_at, updated_at FROM inventory_items
 WHERE id = $1 AND tenant_id = $2
@@ -98,6 +144,37 @@ type GetInventoryItemByIDParams struct {
 
 func (q *Queries) GetInventoryItemByID(ctx context.Context, arg GetInventoryItemByIDParams) (InventoryItem, error) {
 	row := q.db.QueryRow(ctx, getInventoryItemByID, arg.ID, arg.TenantID)
+	var i InventoryItem
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Code,
+		&i.Description,
+		&i.Unit,
+		&i.QuantityInStock,
+		&i.ReorderLevel,
+		&i.UnitCostKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getInventoryItemForUpdate = `-- name: GetInventoryItemForUpdate :one
+SELECT id, tenant_id, category_id, name, code, description, unit, quantity_in_stock, reorder_level, unit_cost_kobo, created_at, updated_at FROM inventory_items
+WHERE id = $1 AND tenant_id = $2
+FOR UPDATE
+`
+
+type GetInventoryItemForUpdateParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetInventoryItemForUpdate(ctx context.Context, arg GetInventoryItemForUpdateParams) (InventoryItem, error) {
+	row := q.db.QueryRow(ctx, getInventoryItemForUpdate, arg.ID, arg.TenantID)
 	var i InventoryItem
 	err := row.Scan(
 		&i.ID,
@@ -204,4 +281,81 @@ func (q *Queries) ListInventoryItems(ctx context.Context, tenantID uuid.UUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const listStockMovementsByItem = `-- name: ListStockMovementsByItem :many
+SELECT id, tenant_id, item_id, movement_type, quantity, reason, reference, performed_by, notes, created_at FROM stock_movements
+WHERE tenant_id = $1 AND item_id = $2
+ORDER BY created_at DESC
+`
+
+type ListStockMovementsByItemParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	ItemID   uuid.UUID `json:"item_id"`
+}
+
+func (q *Queries) ListStockMovementsByItem(ctx context.Context, arg ListStockMovementsByItemParams) ([]StockMovement, error) {
+	rows, err := q.db.Query(ctx, listStockMovementsByItem, arg.TenantID, arg.ItemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StockMovement{}
+	for rows.Next() {
+		var i StockMovement
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ItemID,
+			&i.MovementType,
+			&i.Quantity,
+			&i.Reason,
+			&i.Reference,
+			&i.PerformedBy,
+			&i.Notes,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateItemStock = `-- name: UpdateItemStock :one
+UPDATE inventory_items
+SET 
+    quantity_in_stock = $3,
+    updated_at = NOW()
+WHERE id = $1 AND tenant_id = $2
+RETURNING id, tenant_id, category_id, name, code, description, unit, quantity_in_stock, reorder_level, unit_cost_kobo, created_at, updated_at
+`
+
+type UpdateItemStockParams struct {
+	ID              uuid.UUID `json:"id"`
+	TenantID        uuid.UUID `json:"tenant_id"`
+	QuantityInStock int32     `json:"quantity_in_stock"`
+}
+
+func (q *Queries) UpdateItemStock(ctx context.Context, arg UpdateItemStockParams) (InventoryItem, error) {
+	row := q.db.QueryRow(ctx, updateItemStock, arg.ID, arg.TenantID, arg.QuantityInStock)
+	var i InventoryItem
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Code,
+		&i.Description,
+		&i.Unit,
+		&i.QuantityInStock,
+		&i.ReorderLevel,
+		&i.UnitCostKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

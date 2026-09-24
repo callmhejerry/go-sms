@@ -16,3 +16,12 @@ type CreateInventoryItemRequest struct {
 	ReorderLevel    int32      `json:"reorder_level"`
 	UnitCostKobo    *int64     `json:"unit_cost_kobo"`
 }
+
+type RecordStockMovementRequest struct {
+	ItemID       uuid.UUID `json:"item_id" validate:"required"`
+	MovementType string    `json:"movement_type" validate:"required,oneof=in out adjust"`
+	Quantity     int32     `json:"quantity" validate:"required,gt=0"`
+	Reason       *string   `json:"reason"`
+	Reference    *string   `json:"reference"`
+	Notes        *string   `json:"notes"`
+}

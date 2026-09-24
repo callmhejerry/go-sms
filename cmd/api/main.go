@@ -64,7 +64,7 @@ func main() {
 	billingRespository := billing.NewBillingRepositoryImpl(queries)
 	subjectRepository := subjects.NewSubjectRepositoryImpl(queries)
 	gradingRepository := grading.NewGradingRespositoryImpl(queries)
-	inventoryRepository := inventory.NewRepositoryImpl(queries)
+	inventoryRepository := inventory.NewRepositoryImpl(queries, pool)
 
 	// Services
 	tenantService := tenant.NewService(pool, queries)

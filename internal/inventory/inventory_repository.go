@@ -2,10 +2,14 @@ package inventory
 
 import (
 	"context"
+	"errors"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
+	"github.com/callmhejerry/sms/internal/shared/constants"
+	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type InventoryRepository interface {
@@ -30,15 +34,30 @@ type InventoryRepository interface {
 		ctx context.Context,
 		tenantId uuid.UUID,
 	) ([]store.ListInventoryItemsRow, *apierror.AppError)
+
+	RecordMovement(
+		ctx context.Context,
+		tenantId uuid.UUID,
+		performedBy uuid.UUID,
+		request RecordStockMovementRequest,
+	) (*store.StockMovement, *apierror.AppError)
+
+	ListItemMovement(
+		ctx context.Context,
+		tenantId uuid.UUID,
+		itemId uuid.UUID,
+	) ([]store.StockMovement, *apierror.AppError)
 }
 
 type inventoryRepositoryImpl struct {
 	queries *store.Queries
+	pool    *pgxpool.Pool
 }
 
-func NewRepositoryImpl(queries *store.Queries) InventoryRepository {
+func NewRepositoryImpl(queries *store.Queries, pool *pgxpool.Pool) InventoryRepository {
 	return &inventoryRepositoryImpl{
 		queries: queries,
+		pool:    pool,
 	}
 }
 
@@ -102,6 +121,98 @@ func (repo *inventoryRepositoryImpl) ListInventoryItems(
 	rows, err := repo.queries.ListInventoryItems(ctx, tenantId)
 	if err != nil {
 		return nil, translateInventoryItemError(err)
+	}
+	return rows, nil
+}
+
+func (repo *inventoryRepositoryImpl) RecordMovement(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	performedBy uuid.UUID,
+	request RecordStockMovementRequest,
+) (*store.StockMovement, *apierror.AppError) {
+
+	var stockMovement store.StockMovement
+
+	err := database.WithTx(ctx, repo.pool, func(queries *store.Queries) error {
+		inventory, err := queries.GetInventoryItemForUpdate(ctx, store.GetInventoryItemForUpdateParams{
+			ID:       request.ItemID,
+			TenantID: tenantId,
+		})
+
+		if err != nil {
+			return translateInventoryItemError(err)
+		}
+
+		var newStockQuantity int32
+
+		switch request.MovementType {
+		case string(constants.In):
+			newStockQuantity = inventory.QuantityInStock + request.Quantity
+		case string(constants.Out):
+			if inventory.QuantityInStock < request.Quantity {
+				return ErrInventoryItemQuantityGreaterThanZero
+			}
+			newStockQuantity = inventory.QuantityInStock - request.Quantity
+		case string(constants.Adjust):
+			newStockQuantity = request.Quantity
+		default:
+			return ErrInvalidStockMovementType
+		}
+
+		_, err = queries.UpdateItemStock(ctx, store.UpdateItemStockParams{
+			ID:              request.ItemID,
+			TenantID:        tenantId,
+			QuantityInStock: newStockQuantity,
+		})
+		if err != nil {
+			return translateInventoryItemError(err)
+		}
+
+		movement, err := queries.CreateStockMovement(ctx, store.CreateStockMovementParams{
+			TenantID:     tenantId,
+			ItemID:       request.ItemID,
+			MovementType: request.MovementType,
+			Quantity:     request.Quantity,
+			Reason:       request.Reason,
+			Reference:    request.Reference,
+			PerformedBy:  &performedBy,
+			Notes:        request.Notes,
+		})
+
+		if err != nil {
+			return translateStockMovementError(err)
+		}
+
+		stockMovement = movement
+
+		return nil
+	})
+
+	if err != nil {
+		var appErr apierror.AppError
+		if errors.As(err, &appErr) {
+			return nil, &appErr
+		} else {
+			return nil, apierror.Internal(err, "something went wrong")
+		}
+	}
+
+	return &stockMovement, nil
+}
+
+func (repo *inventoryRepositoryImpl) ListItemMovement(
+	ctx context.Context,
+	tenantId uuid.UUID,
+	itemId uuid.UUID,
+) ([]store.StockMovement, *apierror.AppError) {
+	rows, err := repo.queries.ListStockMovementsByItem(ctx, store.ListStockMovementsByItemParams{
+		TenantID: tenantId,
+		ItemID:   itemId,
+	})
+
+	if err != nil {
+		return nil, translateStockMovementError(err)
 	}
 	return rows, nil
 }

@@ -201,6 +201,19 @@ type Score struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockMovement struct {
+	ID           uuid.UUID          `json:"id"`
+	TenantID     uuid.UUID          `json:"tenant_id"`
+	ItemID       uuid.UUID          `json:"item_id"`
+	MovementType string             `json:"movement_type"`
+	Quantity     int32              `json:"quantity"`
+	Reason       *string            `json:"reason"`
+	Reference    *string            `json:"reference"`
+	PerformedBy  *uuid.UUID         `json:"performed_by"`
+	Notes        *string            `json:"notes"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
 type Student struct {
 	ID                 uuid.UUID          `json:"id"`
 	TenantID           uuid.UUID          `json:"tenant_id"`

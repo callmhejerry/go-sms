@@ -23,10 +23,14 @@ var (
 	ErrInventoryItemQuantityGreaterThanZero = apierror.New("inventory_item_quantity_must_be_greater_than_zero", "Inventory item quantity must be greater than zero", http.StatusBadRequest, nil, nil)
 
 	ErrInventoryReorderLevelMustBeGreaterThanZero = apierror.New("inventory_item_reorder_level_must_be_greater_than_zero", "Inventory reorder level must be greater than zero", http.StatusBadRequest, nil, nil)
+
+	ErrStockMovementNotFound = apierror.NotFound("Stock movement not found")
+
+	ErrInvalidStockMovementType = apierror.New("invalid_stock_movement_type", "Invalid stock movement type", http.StatusBadRequest, nil, nil)
 )
 
 func translateInventoryCategoryError(err error) *apierror.AppError {
-	if err != nil {
+	if err == nil {
 		return nil
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -48,7 +52,7 @@ func translateInventoryCategoryError(err error) *apierror.AppError {
 }
 
 func translateInventoryItemError(err error) *apierror.AppError {
-	if err != nil {
+	if err == nil {
 		return nil
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -76,6 +80,34 @@ func translateInventoryItemError(err error) *apierror.AppError {
 		case apierror.ForeignKeyViolation:
 			if pgErr.ColumnName == "category_id" {
 				return ErrInventoryCategoryNotFound
+			}
+		}
+	}
+	return apierror.Internal(err, "Something went wrong")
+}
+
+func translateStockMovementError(err error) *apierror.AppError {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrStockMovementNotFound
+	}
+
+	var pgErr pgconn.PgError
+
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case apierror.ForeignKeyViolation:
+			switch pgErr.ColumnName {
+			case "item_id":
+				return ErrInventoryItemNotFound
+			}
+		case apierror.CheckViolation:
+			switch pgErr.ColumnName {
+			case "movement_type":
+				return ErrInvalidStockMovementType
 			}
 		}
 	}

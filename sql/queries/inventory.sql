@@ -25,3 +25,28 @@ ORDER BY i.name;
 -- name: GetInventoryItemByID :one
 SELECT * FROM inventory_items
 WHERE id = $1 AND tenant_id = $2;
+
+-- name: CreateStockMovement :one
+INSERT INTO stock_movements (
+    tenant_id, item_id, movement_type, quantity, reason, reference, performed_by, notes
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING *;
+
+-- name: UpdateItemStock :one
+UPDATE inventory_items
+SET 
+    quantity_in_stock = $3,
+    updated_at = NOW()
+WHERE id = $1 AND tenant_id = $2
+RETURNING *;
+
+-- name: ListStockMovementsByItem :many
+SELECT * FROM stock_movements
+WHERE tenant_id = $1 AND item_id = $2
+ORDER BY created_at DESC;
+
+-- name: GetInventoryItemForUpdate :one
+SELECT * FROM inventory_items
+WHERE id = $1 AND tenant_id = $2
+FOR UPDATE;
