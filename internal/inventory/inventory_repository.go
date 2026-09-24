@@ -216,3 +216,62 @@ func (repo *inventoryRepositoryImpl) ListItemMovement(
 	}
 	return rows, nil
 }
+
+func (repo *inventoryRepositoryImpl) CreateIssuance(
+	ctx context.Context,
+	tenantId, issuedById uuid.UUID,
+	request CreateIssuanceRequest,
+) (*store.InventoryIssuance, *apierror.AppError) {
+	var inventoryIssuance store.InventoryIssuance
+
+	err := database.WithTx(ctx, repo.pool, func(queries *store.Queries) error {
+		inventory, err := queries.GetInventoryItemForUpdate(ctx, store.GetInventoryItemForUpdateParams{
+			ID:       request.ItemID,
+			TenantID: tenantId,
+		})
+		if err != nil {
+			return translateInventoryItemError(err)
+		}
+
+		if inventory.QuantityInStock < request.Quantity {
+			return apierror.Validation("insufficient stock")
+		}
+
+		newStockQuantity := inventory.QuantityInStock - request.Quantity
+
+		_, err = queries.UpdateItemStock(ctx, store.UpdateItemStockParams{
+			ID:              request.ItemID,
+			TenantID:        tenantId,
+			QuantityInStock: newStockQuantity,
+		})
+		if err != nil {
+			return translateInventoryItemError(err)
+		}
+
+		reason := "issuance"
+		_, err = queries.CreateStockMovement(ctx, store.CreateStockMovementParams{
+			TenantID:     tenantId,
+			ItemID:       request.ItemID,
+			MovementType: string(constants.Out),
+			Quantity:     request.Quantity,
+			Reason:       &reason,
+			Reference:    nil,
+			PerformedBy:  &issuedById,
+			Notes:        request.Notes,
+		})
+
+		if err != nil {
+			return translateStockMovementError(err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		var appErr apierror.AppError
+		if errors.As(err, &appErr) {
+			return nil, translateInventoryIssuanceError(err)
+		}
+		return nil, apierror.Internal(err, "Something went wrong")
+	}
+	return &inventoryIssuance, nil
+}

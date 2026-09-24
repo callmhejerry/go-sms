@@ -115,6 +115,19 @@ type InventoryCategory struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type InventoryIssuance struct {
+	ID                uuid.UUID          `json:"id"`
+	TenantID          uuid.UUID          `json:"tenant_id"`
+	ItemID            uuid.UUID          `json:"item_id"`
+	Quantity          int32              `json:"quantity"`
+	IssuedToType      string             `json:"issued_to_type"`
+	IssuedToID        uuid.UUID          `json:"issued_to_id"`
+	IssuedBy          *uuid.UUID         `json:"issued_by"`
+	AcademicSessionID *uuid.UUID         `json:"academic_session_id"`
+	Notes             *string            `json:"notes"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
 type InventoryItem struct {
 	ID              uuid.UUID          `json:"id"`
 	TenantID        uuid.UUID          `json:"tenant_id"`

@@ -50,3 +50,21 @@ ORDER BY created_at DESC;
 SELECT * FROM inventory_items
 WHERE id = $1 AND tenant_id = $2
 FOR UPDATE;
+
+-- name: CreateIssuance :one
+INSERT INTO inventory_issuances(
+    tenant_id, item_id, quantity, issued_to_type,
+    issued_to_id, issued_by, academic_session_id, notes
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING *;
+
+-- name: ListIssuancesByItem :many
+SELECT * FROM inventory_issuances
+WHERE tenant_id = $1 AND item_id = $2
+ORDER BY created_at DESC;
+
+-- name: ListIssuancesByRecipient :many
+SELECT * FROM inventory_issuances
+WHERE tenant_id = $1 AND issued_to_type = $2 AND issued_to_id = $3
+ORDER BY created_at DESC;

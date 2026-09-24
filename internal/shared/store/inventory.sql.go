@@ -86,6 +86,53 @@ func (q *Queries) CreateInventoryItem(ctx context.Context, arg CreateInventoryIt
 	return i, err
 }
 
+const createIssuance = `-- name: CreateIssuance :one
+INSERT INTO inventory_issuances(
+    tenant_id, item_id, quantity, issued_to_type,
+    issued_to_id, issued_by, academic_session_id, notes
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING id, tenant_id, item_id, quantity, issued_to_type, issued_to_id, issued_by, academic_session_id, notes, created_at
+`
+
+type CreateIssuanceParams struct {
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	ItemID            uuid.UUID  `json:"item_id"`
+	Quantity          int32      `json:"quantity"`
+	IssuedToType      string     `json:"issued_to_type"`
+	IssuedToID        uuid.UUID  `json:"issued_to_id"`
+	IssuedBy          *uuid.UUID `json:"issued_by"`
+	AcademicSessionID *uuid.UUID `json:"academic_session_id"`
+	Notes             *string    `json:"notes"`
+}
+
+func (q *Queries) CreateIssuance(ctx context.Context, arg CreateIssuanceParams) (InventoryIssuance, error) {
+	row := q.db.QueryRow(ctx, createIssuance,
+		arg.TenantID,
+		arg.ItemID,
+		arg.Quantity,
+		arg.IssuedToType,
+		arg.IssuedToID,
+		arg.IssuedBy,
+		arg.AcademicSessionID,
+		arg.Notes,
+	)
+	var i InventoryIssuance
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.ItemID,
+		&i.Quantity,
+		&i.IssuedToType,
+		&i.IssuedToID,
+		&i.IssuedBy,
+		&i.AcademicSessionID,
+		&i.Notes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createStockMovement = `-- name: CreateStockMovement :one
 INSERT INTO stock_movements (
     tenant_id, item_id, movement_type, quantity, reason, reference, performed_by, notes
@@ -272,6 +319,91 @@ func (q *Queries) ListInventoryItems(ctx context.Context, tenantID uuid.UUID) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listIssuancesByItem = `-- name: ListIssuancesByItem :many
+SELECT id, tenant_id, item_id, quantity, issued_to_type, issued_to_id, issued_by, academic_session_id, notes, created_at FROM inventory_issuances
+WHERE tenant_id = $1 AND item_id = $2
+ORDER BY created_at DESC
+`
+
+type ListIssuancesByItemParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	ItemID   uuid.UUID `json:"item_id"`
+}
+
+func (q *Queries) ListIssuancesByItem(ctx context.Context, arg ListIssuancesByItemParams) ([]InventoryIssuance, error) {
+	rows, err := q.db.Query(ctx, listIssuancesByItem, arg.TenantID, arg.ItemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []InventoryIssuance{}
+	for rows.Next() {
+		var i InventoryIssuance
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ItemID,
+			&i.Quantity,
+			&i.IssuedToType,
+			&i.IssuedToID,
+			&i.IssuedBy,
+			&i.AcademicSessionID,
+			&i.Notes,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listIssuancesByRecipient = `-- name: ListIssuancesByRecipient :many
+SELECT id, tenant_id, item_id, quantity, issued_to_type, issued_to_id, issued_by, academic_session_id, notes, created_at FROM inventory_issuances
+WHERE tenant_id = $1 AND issued_to_type = $2 AND issued_to_id = $3
+ORDER BY created_at DESC
+`
+
+type ListIssuancesByRecipientParams struct {
+	TenantID     uuid.UUID `json:"tenant_id"`
+	IssuedToType string    `json:"issued_to_type"`
+	IssuedToID   uuid.UUID `json:"issued_to_id"`
+}
+
+func (q *Queries) ListIssuancesByRecipient(ctx context.Context, arg ListIssuancesByRecipientParams) ([]InventoryIssuance, error) {
+	rows, err := q.db.Query(ctx, listIssuancesByRecipient, arg.TenantID, arg.IssuedToType, arg.IssuedToID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []InventoryIssuance{}
+	for rows.Next() {
+		var i InventoryIssuance
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ItemID,
+			&i.Quantity,
+			&i.IssuedToType,
+			&i.IssuedToID,
+			&i.IssuedBy,
+			&i.AcademicSessionID,
+			&i.Notes,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

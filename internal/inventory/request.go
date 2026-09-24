@@ -25,3 +25,12 @@ type RecordStockMovementRequest struct {
 	Reference    *string   `json:"reference"`
 	Notes        *string   `json:"notes"`
 }
+
+type CreateIssuanceRequest struct {
+	ItemID            uuid.UUID  `json:"item_id" validate:"required"`
+	Quantity          int32      `json:"quantity" validate:"required,gt=0"`
+	IssuedToType      string     `json:"issued_to_type" validate:"required,oneof=student department staff"`
+	IssuedToID        uuid.UUID  `json:"issued_to_id" validate:"required"`
+	AcademicSessionID *uuid.UUID `json:"academic_session_id"`
+	Notes             *string    `json:"notes"`
+}
