@@ -47,3 +47,18 @@ func (service *InventoryService) ListInventoryItems(
 ) ([]store.ListInventoryItemsRow, *apierror.AppError) {
 	return service.repo.ListInventoryItems(ctx, tenantId)
 }
+
+func (service *InventoryService) RecordStockMovement(
+	ctx context.Context,
+	tenantId, recordedBy uuid.UUID,
+	request RecordStockMovementRequest,
+) (*store.StockMovement, *apierror.AppError) {
+	return service.repo.RecordMovement(ctx, tenantId, recordedBy, request)
+}
+
+func (service *InventoryService) ListItemMovements(
+	ctx context.Context,
+	tenantId, itemId uuid.UUID,
+) ([]store.StockMovement, *apierror.AppError) {
+	return service.repo.ListItemMovement(ctx, tenantId, itemId)
+}
