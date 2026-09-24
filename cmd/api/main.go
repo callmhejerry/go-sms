@@ -18,6 +18,7 @@ import (
 	"github.com/callmhejerry/sms/internal/grading/grading"
 	"github.com/callmhejerry/sms/internal/grading/subjects"
 	"github.com/callmhejerry/sms/internal/identity"
+	"github.com/callmhejerry/sms/internal/inventory"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/config"
 	"github.com/callmhejerry/sms/internal/shared/database"
@@ -63,6 +64,7 @@ func main() {
 	billingRespository := billing.NewBillingRepositoryImpl(queries)
 	subjectRepository := subjects.NewSubjectRepositoryImpl(queries)
 	gradingRepository := grading.NewGradingRespositoryImpl(queries)
+	inventoryRepository := inventory.NewRepositoryImpl(queries)
 
 	// Services
 	tenantService := tenant.NewService(pool, queries)
@@ -74,6 +76,7 @@ func main() {
 	billingService := billing.NewBillingService(billingRespository)
 	subjectService := subjects.NewSubjectService(subjectRepository)
 	gradingService := grading.NewGradingService(gradingRepository)
+	inventoryService := inventory.NewInventoryService(inventoryRepository)
 
 	// Handlers
 	tenantHandler := tenant.NewHandler(tenantService, log, appValidator)
@@ -85,6 +88,7 @@ func main() {
 	billingHandler := billing.NewBillingHandler(billingService, log, appValidator)
 	subjectHandler := subjects.NewHandler(subjectService, log, appValidator)
 	gradingHandler := grading.NewGradingHandler(gradingService, log, appValidator)
+	inventoryHandler := inventory.NewHandler(inventoryService, log, appValidator)
 
 	handlers := server.Handlers{
 		Tenant:          tenantHandler,
@@ -96,6 +100,7 @@ func main() {
 		Billing:         billingHandler,
 		Subject:         subjectHandler,
 		Grading:         gradingHandler,
+		Inventory:       inventoryHandler,
 	}
 
 	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)

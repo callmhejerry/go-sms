@@ -14,6 +14,7 @@ import (
 	"github.com/callmhejerry/sms/internal/grading/grading"
 	"github.com/callmhejerry/sms/internal/grading/subjects"
 	"github.com/callmhejerry/sms/internal/identity"
+	"github.com/callmhejerry/sms/internal/inventory"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
 	"github.com/callmhejerry/sms/internal/tenant"
@@ -35,6 +36,7 @@ type Handlers struct {
 	Billing         *billing.BillingHandler
 	Subject         *subjects.SubjectHandler
 	Grading         *grading.GradingHandler
+	Inventory       *inventory.InventoryHandler
 }
 
 func New(
@@ -132,6 +134,14 @@ func New(
 	protectedMux.HandleFunc("POST /api/v1/results/compute", handlers.Grading.ComputeResults)
 	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/results", handlers.Grading.GetStudentResults)
 	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/report-card", handlers.Grading.GetStudentReportCard)
+
+	// Inventory Categories
+	protectedMux.HandleFunc("POST /api/v1/inventory/categories", handlers.Inventory.CreateCategory)
+	protectedMux.HandleFunc("GET /api/v1/inventory/categories", handlers.Inventory.ListCategories)
+
+	// Inventory Items
+	protectedMux.HandleFunc("POST /api/v1/inventory/items", handlers.Inventory.CreateItem)
+	protectedMux.HandleFunc("GET /api/v1/inventory/items", handlers.Inventory.ListItems)
 
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
