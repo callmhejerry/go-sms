@@ -58,6 +58,10 @@ type InventoryRepository interface {
 		ctx context.Context,
 		tenantId, inventoryItemId uuid.UUID,
 	) ([]store.InventoryIssuance, *apierror.AppError)
+
+	ListLowStockItems(
+		ctx context.Context, tenantID uuid.UUID,
+	) ([]store.ListLowStockItemsRow, error)
 }
 
 type inventoryRepositoryImpl struct {
@@ -301,4 +305,14 @@ func (repo *inventoryRepositoryImpl) ListInventoryIssuances(
 		return nil, translateInventoryIssuanceError(err)
 	}
 	return rows, nil
+}
+
+func (repo *inventoryRepositoryImpl) ListLowStockItems(
+	ctx context.Context, tenantID uuid.UUID,
+) ([]store.ListLowStockItemsRow, error) {
+	items, err := repo.queries.ListLowStockItems(ctx, tenantID)
+	if err != nil {
+		return nil, translateInventoryItemError(err)
+	}
+	return items, nil
 }

@@ -77,3 +77,7 @@ func (service *InventoryService) ListInventoryIssuance(
 ) ([]store.InventoryIssuance, *apierror.AppError) {
 	return service.repo.ListInventoryIssuances(ctx, tenantId, inventoryItemId)
 }
+
+func (service *InventoryService) ListLowStockItems(ctx context.Context, tenantID uuid.UUID) ([]store.ListLowStockItemsRow, error) {
+	return service.repo.ListLowStockItems(ctx, tenantID)
+}
