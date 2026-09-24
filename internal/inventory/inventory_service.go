@@ -70,3 +70,10 @@ func (service *InventoryService) CreateInventoryIssuance(
 ) (*store.InventoryIssuance, *apierror.AppError) {
 	return service.repo.CreateIssuance(ctx, tenantId, issuedBy, request)
 }
+
+func (service *InventoryService) ListInventoryIssuance(
+	ctx context.Context,
+	tenantId, inventoryItemId uuid.UUID,
+) ([]store.InventoryIssuance, *apierror.AppError) {
+	return service.repo.ListInventoryIssuances(ctx, tenantId, inventoryItemId)
+}

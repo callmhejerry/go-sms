@@ -167,3 +167,50 @@ func (h *InventoryHandler) ListItemMovements(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(movements)
 }
+
+func (h *InventoryHandler) CreateIssuance(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	var input CreateIssuanceRequest
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid request body"), h.logger)
+		return
+	}
+
+	issuance, err := h.service.CreateInventoryIssuance(r.Context(), claims.TenantID, claims.UserID, input)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(issuance)
+}
+
+func (h *InventoryHandler) ListItemIssuances(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	itemID, err := uuid.Parse(r.PathValue("item_id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid item id"), h.logger)
+		return
+	}
+
+	issuances, err := h.service.ListInventoryIssuance(r.Context(), claims.TenantID, itemID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(issuances)
+}

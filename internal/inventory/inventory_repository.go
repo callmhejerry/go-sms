@@ -53,6 +53,11 @@ type InventoryRepository interface {
 		tenantId, issuedById uuid.UUID,
 		request CreateIssuanceRequest,
 	) (*store.InventoryIssuance, *apierror.AppError)
+
+	ListInventoryIssuances(
+		ctx context.Context,
+		tenantId, inventoryItemId uuid.UUID,
+	) ([]store.InventoryIssuance, *apierror.AppError)
 }
 
 type inventoryRepositoryImpl struct {
@@ -280,4 +285,20 @@ func (repo *inventoryRepositoryImpl) CreateIssuance(
 		return nil, apierror.Internal(err, "Something went wrong")
 	}
 	return &inventoryIssuance, nil
+}
+
+func (repo *inventoryRepositoryImpl) ListInventoryIssuances(
+	ctx context.Context,
+	tenantId, inventoryItemId uuid.UUID,
+) ([]store.InventoryIssuance, *apierror.AppError) {
+	rows, err := repo.queries.ListIssuancesByItem(
+		ctx, store.ListIssuancesByItemParams{
+			TenantID: tenantId,
+			ItemID:   inventoryItemId,
+		},
+	)
+	if err != nil {
+		return nil, translateInventoryIssuanceError(err)
+	}
+	return rows, nil
 }
