@@ -68,3 +68,11 @@ ORDER BY created_at DESC;
 SELECT * FROM inventory_issuances
 WHERE tenant_id = $1 AND issued_to_type = $2 AND issued_to_id = $3
 ORDER BY created_at DESC;
+
+-- name: ListLowStockItems :many
+SELECT i.*, c.name AS category_name
+FROM inventory_items i
+LEFT JOIN inventory_categories c ON c.id = i.category_id
+WHERE i.tenant_id = $1
+  AND i.quantity_in_stock <= i.reorder_level
+ORDER BY i.quantity_in_stock ASC, i.name;

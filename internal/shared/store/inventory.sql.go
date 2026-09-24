@@ -415,6 +415,65 @@ func (q *Queries) ListIssuancesByRecipient(ctx context.Context, arg ListIssuance
 	return items, nil
 }
 
+const listLowStockItems = `-- name: ListLowStockItems :many
+SELECT i.id, i.tenant_id, i.category_id, i.name, i.code, i.description, i.unit, i.quantity_in_stock, i.reorder_level, i.unit_cost_kobo, i.created_at, i.updated_at, c.name AS category_name
+FROM inventory_items i
+LEFT JOIN inventory_categories c ON c.id = i.category_id
+WHERE i.tenant_id = $1
+  AND i.quantity_in_stock <= i.reorder_level
+ORDER BY i.quantity_in_stock ASC, i.name
+`
+
+type ListLowStockItemsRow struct {
+	ID              uuid.UUID          `json:"id"`
+	TenantID        uuid.UUID          `json:"tenant_id"`
+	CategoryID      *uuid.UUID         `json:"category_id"`
+	Name            string             `json:"name"`
+	Code            *string            `json:"code"`
+	Description     *string            `json:"description"`
+	Unit            string             `json:"unit"`
+	QuantityInStock int32              `json:"quantity_in_stock"`
+	ReorderLevel    int32              `json:"reorder_level"`
+	UnitCostKobo    *int64             `json:"unit_cost_kobo"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	CategoryName    *string            `json:"category_name"`
+}
+
+func (q *Queries) ListLowStockItems(ctx context.Context, tenantID uuid.UUID) ([]ListLowStockItemsRow, error) {
+	rows, err := q.db.Query(ctx, listLowStockItems, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListLowStockItemsRow{}
+	for rows.Next() {
+		var i ListLowStockItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CategoryID,
+			&i.Name,
+			&i.Code,
+			&i.Description,
+			&i.Unit,
+			&i.QuantityInStock,
+			&i.ReorderLevel,
+			&i.UnitCostKobo,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStockMovementsByItem = `-- name: ListStockMovementsByItem :many
 SELECT id, tenant_id, item_id, movement_type, quantity, reason, reference, performed_by, notes, created_at FROM stock_movements
 WHERE tenant_id = $1 AND item_id = $2
