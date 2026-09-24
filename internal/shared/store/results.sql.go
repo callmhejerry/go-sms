@@ -136,6 +136,101 @@ func (q *Queries) GetScoresForComputation(ctx context.Context, arg GetScoresForC
 	return items, nil
 }
 
+const getStudentReportCard = `-- name: GetStudentReportCard :many
+SELECT 
+    r.id, r.tenant_id, r.student_id, r.subject_id, r.class_arm_id, r.academic_session_id, r.total_score, r.max_total, r.percentage, r.grade, r.remark, r.created_at, r.updated_at,
+    sub.name AS subject_name,
+    sub.code AS subject_code,
+    s.first_name,
+    s.last_name,
+    s.admission_number,
+    ca.name AS class_arm_name,
+    c.name AS class_name,
+    sess.name AS session_name
+FROM results r
+JOIN subjects sub ON sub.id = r.subject_id
+JOIN students s ON s.id = r.student_id
+JOIN class_arms ca ON ca.id = r.class_arm_id
+JOIN classes c ON c.id = ca.class_id
+JOIN academic_sessions sess ON sess.id = r.academic_session_id
+WHERE r.tenant_id = $1 
+  AND r.student_id = $2 
+  AND r.academic_session_id = $3
+ORDER BY sub.name
+`
+
+type GetStudentReportCardParams struct {
+	TenantID          uuid.UUID `json:"tenant_id"`
+	StudentID         uuid.UUID `json:"student_id"`
+	AcademicSessionID uuid.UUID `json:"academic_session_id"`
+}
+
+type GetStudentReportCardRow struct {
+	ID                uuid.UUID          `json:"id"`
+	TenantID          uuid.UUID          `json:"tenant_id"`
+	StudentID         uuid.UUID          `json:"student_id"`
+	SubjectID         uuid.UUID          `json:"subject_id"`
+	ClassArmID        uuid.UUID          `json:"class_arm_id"`
+	AcademicSessionID uuid.UUID          `json:"academic_session_id"`
+	TotalScore        decimal.Decimal    `json:"total_score"`
+	MaxTotal          decimal.Decimal    `json:"max_total"`
+	Percentage        decimal.Decimal    `json:"percentage"`
+	Grade             *string            `json:"grade"`
+	Remark            *string            `json:"remark"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	SubjectName       string             `json:"subject_name"`
+	SubjectCode       string             `json:"subject_code"`
+	FirstName         string             `json:"first_name"`
+	LastName          string             `json:"last_name"`
+	AdmissionNumber   string             `json:"admission_number"`
+	ClassArmName      string             `json:"class_arm_name"`
+	ClassName         string             `json:"class_name"`
+	SessionName       string             `json:"session_name"`
+}
+
+func (q *Queries) GetStudentReportCard(ctx context.Context, arg GetStudentReportCardParams) ([]GetStudentReportCardRow, error) {
+	rows, err := q.db.Query(ctx, getStudentReportCard, arg.TenantID, arg.StudentID, arg.AcademicSessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetStudentReportCardRow{}
+	for rows.Next() {
+		var i GetStudentReportCardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.StudentID,
+			&i.SubjectID,
+			&i.ClassArmID,
+			&i.AcademicSessionID,
+			&i.TotalScore,
+			&i.MaxTotal,
+			&i.Percentage,
+			&i.Grade,
+			&i.Remark,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SubjectName,
+			&i.SubjectCode,
+			&i.FirstName,
+			&i.LastName,
+			&i.AdmissionNumber,
+			&i.ClassArmName,
+			&i.ClassName,
+			&i.SessionName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertResult = `-- name: UpsertResult :one
 INSERT INTO results(
     tenant_id, student_id, subject_id, class_arm_id,

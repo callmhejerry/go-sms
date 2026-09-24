@@ -3,6 +3,7 @@ package grading
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/store"
@@ -176,6 +177,60 @@ func (service *GradingService) GetStudentResults(
 	request GetStudentResultRequest,
 ) ([]store.GetResultsByStudentRow, *apierror.AppError) {
 	return service.gradingRepository.GetStudentResults(ctx, tenantId, request)
+}
+
+func (service *GradingService) GetStudentReportCard(
+	ctx context.Context,
+	tenantId, studentId, academicSessionId uuid.UUID,
+) (*ReportCardResponse, *apierror.AppError) {
+	rows, err := service.gradingRepository.GetStudentReportCard(ctx, tenantId, studentId, academicSessionId)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, apierror.NotFound("no results found for this student in the selected session")
+	}
+
+	// Assemble a clean report card response
+	first := rows[0]
+
+	subjects := make([]SubjectResultResponse, 0, len(rows))
+	var totalPercentage decimal.Decimal
+
+	for _, row := range rows {
+		subject := SubjectResultResponse{
+			SubjectName: row.SubjectName,
+			SubjectCode: row.SubjectCode,
+			TotalScore:  row.TotalScore,
+			MaxTotal:    row.MaxTotal,
+			Percentage:  row.Percentage,
+			Grade:       row.Grade,
+			Remark:      row.Remark,
+		}
+		subjects = append(subjects, subject)
+		totalPercentage = totalPercentage.Add(row.Percentage)
+	}
+
+	average := decimal.Zero
+	if len(rows) > 0 {
+		average = totalPercentage.Div(decimal.NewFromInt(int64(len(rows)))).Round(2)
+	}
+
+	studentInfo := ReportCardStudentInfoResponse{
+		AdmissionNumber: first.AdmissionNumber,
+		FirstName:       first.FirstName,
+		LastName:        first.LastName,
+		ClassName:       first.ClassName,
+		ClassArmName:    first.ClassArmName,
+	}
+	reportCard := ReportCardResponse{
+		StudentInfo:     studentInfo,
+		AcademicSession: first.SessionName,
+		Subjects:        subjects,
+		Average:         average,
+		GeneratedAt:     time.Now(),
+	}
+	return &reportCard, nil
 }
 
 func calculateGrade(percentage decimal.Decimal) (string, string) {

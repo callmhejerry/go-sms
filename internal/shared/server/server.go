@@ -131,6 +131,7 @@ func New(
 	// Results
 	protectedMux.HandleFunc("POST /api/v1/results/compute", handlers.Grading.ComputeResults)
 	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/results", handlers.Grading.GetStudentResults)
+	protectedMux.HandleFunc("GET /api/v1/students/{student_id}/report-card", handlers.Grading.GetStudentReportCard)
 
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)

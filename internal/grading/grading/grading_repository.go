@@ -71,6 +71,13 @@ type GradingRepository interface {
 		tenantId uuid.UUID,
 		request GetStudentResultRequest,
 	) ([]store.GetResultsByStudentRow, *apierror.AppError)
+
+	GetStudentReportCard(
+		ctx context.Context,
+		tenantId,
+		studentId,
+		academicSessionId uuid.UUID,
+	) ([]store.GetStudentReportCardRow, *apierror.AppError)
 }
 
 type gradingRepositoryImpl struct {
@@ -269,4 +276,22 @@ func (repo *gradingRepositoryImpl) GetStudentResults(
 		return nil, translateScoresTypeError(err)
 	}
 	return rows, nil
+}
+
+func (repo *gradingRepositoryImpl) GetStudentReportCard(
+	ctx context.Context,
+	tenantId,
+	studentId,
+	academicSessionId uuid.UUID,
+) ([]store.GetStudentReportCardRow, *apierror.AppError) {
+	row, err := repo.queries.GetStudentReportCard(ctx, store.GetStudentReportCardParams{
+		TenantID:          tenantId,
+		StudentID:         studentId,
+		AcademicSessionID: academicSessionId,
+	})
+
+	if err != nil {
+		return nil, translateScoresTypeError(err)
+	}
+	return row, nil
 }
