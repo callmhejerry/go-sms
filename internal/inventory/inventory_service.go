@@ -62,3 +62,11 @@ func (service *InventoryService) ListItemMovements(
 ) ([]store.StockMovement, *apierror.AppError) {
 	return service.repo.ListItemMovement(ctx, tenantId, itemId)
 }
+
+func (service *InventoryService) CreateInventoryIssuance(
+	ctx context.Context,
+	tenantId, issuedBy uuid.UUID,
+	request CreateIssuanceRequest,
+) (*store.InventoryIssuance, *apierror.AppError) {
+	return service.repo.CreateIssuance(ctx, tenantId, issuedBy, request)
+}
