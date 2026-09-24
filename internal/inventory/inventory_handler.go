@@ -8,6 +8,7 @@ import (
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
 	"github.com/callmhejerry/sms/internal/shared/validation"
+	"github.com/google/uuid"
 )
 
 type InventoryHandler struct {
@@ -113,4 +114,56 @@ func (h *InventoryHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
+}
+
+func (h *InventoryHandler) RecordStockMovement(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	var input RecordStockMovementRequest
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid request body"), h.logger)
+		return
+	}
+
+	if err := h.appValidator.ValidateStruct(input); err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	movement, err := h.service.RecordStockMovement(r.Context(), claims.TenantID, claims.UserID, input)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(movement)
+}
+
+func (h *InventoryHandler) ListItemMovements(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	itemID, err := uuid.Parse(r.PathValue("item_id"))
+	if err != nil {
+		apierror.WriteError(w, apierror.Validation("invalid item id"), h.logger)
+		return
+	}
+
+	movements, err := h.service.ListItemMovements(r.Context(), claims.TenantID, itemID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(movements)
 }

@@ -143,6 +143,10 @@ func New(
 	protectedMux.HandleFunc("POST /api/v1/inventory/items", handlers.Inventory.CreateItem)
 	protectedMux.HandleFunc("GET /api/v1/inventory/items", handlers.Inventory.ListItems)
 
+	// Stock Movements
+	protectedMux.HandleFunc("POST /api/v1/inventory/movements", handlers.Inventory.RecordStockMovement)
+	protectedMux.HandleFunc("GET /api/v1/inventory/items/{item_id}/movements", handlers.Inventory.ListItemMovements)
+
 	// MIDDLEWARE CHAIN
 	protectedHandler := middleware.AuthMiddleware(jwtManger)(protectedMux)
 	mux.Handle("/", protectedHandler)
