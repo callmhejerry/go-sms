@@ -214,3 +214,20 @@ func (h *InventoryHandler) ListItemIssuances(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(issuances)
 }
+
+func (h *InventoryHandler) ListLowStockItems(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+		return
+	}
+
+	items, err := h.service.ListLowStockItems(r.Context(), claims.TenantID)
+	if err != nil {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
