@@ -16,6 +16,7 @@ import (
 	"github.com/callmhejerry/sms/internal/identity"
 	"github.com/callmhejerry/sms/internal/inventory"
 	"github.com/callmhejerry/sms/internal/shared/auth"
+	"github.com/callmhejerry/sms/internal/shared/config"
 	"github.com/callmhejerry/sms/internal/shared/middleware"
 	"github.com/callmhejerry/sms/internal/tenant"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -39,6 +40,8 @@ type Handlers struct {
 	Inventory       *inventory.InventoryHandler
 }
 
+const version = "0.1.0"
+
 func New(
 	port string,
 	pool *pgxpool.Pool,
@@ -46,13 +49,15 @@ func New(
 	handlers Handlers,
 	jwtManger *auth.JWTManager,
 	roleChecker middleware.RoleChecker,
+	cfg config.Config,
 ) *Server {
+
 	mux := http.NewServeMux()
 
 	// --------------------------
 	// Public routes (no auth)
 	// --------------------------
-	healthHanler := NewHealthHandler(pool)
+	healthHanler := NewHealthHandler(pool, version, cfg.AppEnv)
 	mux.HandleFunc("GET /healthz", healthHanler.Healthz)
 	mux.HandleFunc("GET /readyz", healthHanler.Readyz)
 

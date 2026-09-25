@@ -10,12 +10,16 @@ import (
 )
 
 type HealthHandler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	appEnv  string
+	version string
 }
 
-func NewHealthHandler(pool *pgxpool.Pool) *HealthHandler {
+func NewHealthHandler(pool *pgxpool.Pool, appEnv, version string) *HealthHandler {
 	return &HealthHandler{
-		pool: pool,
+		pool:    pool,
+		appEnv:  appEnv,
+		version: version,
 	}
 }
 
@@ -47,5 +51,14 @@ func (handler *HealthHandler) Readyz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "ready",
+	})
+}
+
+func (h *HealthHandler) Info(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "ok",
+		"env":     h.appEnv,
+		"version": h.version,
 	})
 }

@@ -31,7 +31,9 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load()
+	if os.Getenv("APP_ENV") != "production" {
+		_ = godotenv.Load()
+	}
 	cfg, err := config.Load()
 
 	if err != nil {
@@ -103,7 +105,7 @@ func main() {
 		Inventory:       inventoryHandler,
 	}
 
-	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService)
+	server := server.New(cfg.AppPort, pool, log, handlers, jwtManager, identityService, *cfg)
 	//graceful shutdown
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {

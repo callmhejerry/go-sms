@@ -24,3 +24,11 @@ migrate-down:
 migrate-create:
 	@read -p "Migration name: " name; \
 	migrate create -ext sql -dir migrations -seq $$name
+
+TEST_DB_URL=postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/school_sms_test?sslmode=$(DB_SSLMODE)
+
+migrate-test:
+	migrate -path migrations -database "$(TEST_DB_URL)" up
+
+migrate-test-down:
+	migrate -path migrations -database "$(TEST_DB_URL)" down

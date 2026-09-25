@@ -50,7 +50,25 @@ func (cfg *Config) validate() error {
 	if cfg.DBPassword == "" {
 		return fmt.Errorf("DB_PASSWORD is required")
 	}
+
+	// Stronger rules in production
+	if cfg.AppEnv == "production" {
+		if len(cfg.JWTSecret) < 32 {
+			return fmt.Errorf("JWT_SECRET must be at least 32 characters in production")
+		}
+		if cfg.DBSSLMode == "disable" {
+			return fmt.Errorf("DB_SSLMODE should not be 'disable' in production")
+		}
+		if cfg.JWTSecret == "change-me-in-production-super-secret-key" ||
+			cfg.JWTSecret == "change-me-in-production-super-secret-key-32chars" {
+			return fmt.Errorf("JWT_SECRET must be changed from the default value in production")
+		}
+	}
 	return nil
+}
+
+func (c *Config) IsProduction() bool {
+	return c.AppEnv == "production"
 }
 
 // DSN returns the PostgreSQL connection string.

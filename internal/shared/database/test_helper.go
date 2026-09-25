@@ -16,7 +16,7 @@ func NewTestPool(t *testing.T) *pgxpool.Pool {
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBUser:     getEnv("DB_USER", "school"),
 		DBPort:     getEnv("DB_PORT", "5433"),
-		DBName:     getEnv("DB_NAME", "school_sms"),
+		DBName:     "school_sms_test",
 		DBPassword: getEnv("DB_PASSWORD", "schoolsecret"),
 		DBSSLMode:  "disable",
 	}
@@ -33,4 +33,43 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func cleanup(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+
+	_, err := pool.Exec(context.Background(), `
+		TRUNCATE TABLE
+			audit_logs,
+			payment_allocations,
+			payments,
+			student_fees,
+			fee_structures,
+			fee_types,
+			scores,
+			results,
+			teacher_assignments,
+			class_subjects,
+			subjects,
+			assessment_types,
+			inventory_issuances,
+			stock_movements,
+			inventory_items,
+			inventory_categories,
+			student_parents,
+			parents,
+			admissions,
+			students,
+			class_arms,
+			classes,
+			academic_sessions,
+			user_roles,
+			roles,
+			users,
+			tenants
+		RESTART IDENTITY CASCADE;
+	`)
+	if err != nil {
+		t.Fatalf("failed to clean test database: %v", err)
+	}
 }
