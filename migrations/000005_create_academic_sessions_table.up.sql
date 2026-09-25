@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS academic_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    UNIQUE(tenant_id, name)
+    CONSTRAINT academic_sessions_tenant_id_name_key UNIQUE(tenant_id, name)
 );
 
 CREATE INDEX idx_academic_sessions_tenant_id ON academic_sessions(tenant_id);

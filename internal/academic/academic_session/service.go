@@ -28,7 +28,7 @@ func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
 	}
 }
 
-func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid.UUID, request CreateAcademicSessionRequest) (*store.AcademicSession, error) {
+func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid.UUID, request CreateAcademicSessionRequest) (*store.AcademicSession, *apierror.AppError) {
 	name := strings.TrimSpace(request.Name)
 	startDate, _ := time.Parse("2026-01-29", request.StartDate)
 	endDate, _ := time.Parse("2026-01-30", request.EndDate)
@@ -49,7 +49,7 @@ func (service *Service) CreateAcademicSession(ctx context.Context, tenantId uuid
 	return session, err
 }
 
-func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.UUID) ([]store.AcademicSession, error) {
+func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.UUID) ([]store.AcademicSession, *apierror.AppError) {
 	sessions, err := service.queries.ListAcademicSessions(ctx, tenantId)
 
 	if err != nil {
@@ -58,7 +58,7 @@ func (service *Service) ListAcademicSession(ctx context.Context, tenantId uuid.U
 	return sessions, nil
 }
 
-func (service *Service) GetCurrentAcademicSession(ctx context.Context, tenantId uuid.UUID) (*store.AcademicSession, error) {
+func (service *Service) GetCurrentAcademicSession(ctx context.Context, tenantId uuid.UUID) (*store.AcademicSession, *apierror.AppError) {
 	currentSession, err := service.queries.GetCurrentAcademicSession(ctx, tenantId)
 	if err != nil {
 		return nil, academic.TranslateAcademicError(err)

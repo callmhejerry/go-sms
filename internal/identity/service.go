@@ -58,7 +58,6 @@ func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, inpu
 	}
 
 	newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
-		TenantID:     tenantId,
 		Email:        input.Email,
 		FirstName:    firstName,
 		LastName:     lastName,
@@ -72,10 +71,7 @@ func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, inpu
 }
 
 func (service *Service) GetUserByID(ctx context.Context, id uuid.UUID, tenant_id uuid.UUID) (*store.User, error) {
-	user, err := service.queries.GetUserByID(ctx, store.GetUserByIDParams{
-		ID:       id,
-		TenantID: tenant_id,
-	})
+	user, err := service.queries.GetUserByID(ctx, id)
 
 	if err != nil {
 		return nil, apierror.NotFound("User not found")
@@ -86,7 +82,6 @@ func (service *Service) GetUserByID(ctx context.Context, id uuid.UUID, tenant_id
 func ConvertToUserResponse(user *store.User) UserResponse {
 	return UserResponse{
 		ID:        user.ID.String(),
-		TenantID:  user.TenantID.String(),
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		CreatedAt: user.CreatedAt.Time.String(),
@@ -96,25 +91,12 @@ func ConvertToUserResponse(user *store.User) UserResponse {
 
 func (service *Service) Login(ctx context.Context, request LoginRequest) (*LoginResponse, error) {
 	email := strings.TrimSpace(strings.ToLower(request.Email))
-	slug := strings.TrimSpace(strings.ToLower(request.TenantSlug))
 
-	if slug == "" {
-		return nil, apierror.Validation("tenant_slug is required")
-	}
 	if email == "" {
 		return nil, apierror.Validation("email is required")
 	}
 
-	tenant, err := service.queries.GetTenantBySlug(ctx, slug)
-
-	if err != nil {
-		return nil, InvalidCredentials
-	}
-
-	user, err := service.queries.GetUserByEmail(ctx, store.GetUserByEmailParams{
-		Email:    email,
-		TenantID: tenant.ID,
-	})
+	user, err := service.queries.GetUserByEmail(ctx, email)
 
 	if err != nil {
 		return nil, InvalidCredentials
@@ -134,13 +116,8 @@ func (service *Service) Login(ctx context.Context, request LoginRequest) (*Login
 	if err != nil {
 		return nil, apierror.Internal(err, "Failed to parse user_id")
 	}
-	tenantId, err := uuid.Parse(tenant.ID.String())
 
-	if err != nil {
-		return nil, apierror.Internal(err, "Failed to parse tenant_id")
-	}
-
-	token, err := service.jwtManager.Generate(userId, tenantId, email)
+	token, err := service.jwtManager.Generate(userId, email)
 
 	if err != nil {
 		return nil, apierror.Internal(err, "Failed to generate token")

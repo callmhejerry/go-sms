@@ -26,9 +26,9 @@ func NewHandler(service *Service, logger *slog.Logger, appValidator *validation.
 }
 
 func (handler *Handler) CreateClass(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (handler *Handler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	class, err := handler.service.CreateClass(r.Context(), claims.TenantID, request)
+	class, err := handler.service.CreateClass(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -57,13 +57,13 @@ func (handler *Handler) CreateClass(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) ListClasses(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
-	classes, err := handler.service.ListClasses(r.Context(), claims.TenantID)
+	classes, err := handler.service.ListClasses(r.Context(), tenantId)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -75,9 +75,9 @@ func (handler *Handler) ListClasses(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) CreateClassArm(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -93,7 +93,7 @@ func (handler *Handler) CreateClassArm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	classArm, err := handler.service.CreateClassArm(r.Context(), claims.TenantID, request)
+	classArm, err := handler.service.CreateClassArm(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -106,18 +106,18 @@ func (handler *Handler) CreateClassArm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) ListClassArms(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
-	classId, err := uuid.Parse(r.PathValue("class_id"))
-	if err != nil {
+	classId, perr := uuid.Parse(r.PathValue("class_id"))
+	if perr != nil {
 		apierror.WriteError(w, apierror.Validation("Invalid class id"), handler.logger)
 		return
 	}
-	classArms, err := handler.service.ListClassArms(r.Context(), claims.TenantID, classId)
+	classArms, err := handler.service.ListClassArms(r.Context(), tenantId, classId)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)

@@ -77,7 +77,6 @@ func (service *Service) CreateTenant(ctx context.Context, input CreateTenantRequ
 		}
 
 		newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
-			TenantID:     newTenant.ID,
 			Email:        email,
 			FirstName:    firstName,
 			LastName:     lastName,

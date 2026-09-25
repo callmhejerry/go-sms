@@ -25,9 +25,9 @@ func NewHandler(service *Service, logger *slog.Logger, appValidator *validation.
 }
 
 func (handler *Handler) CreateAcademicSession(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (handler *Handler) CreateAcademicSession(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	session, err := handler.service.CreateAcademicSession(r.Context(), claims.TenantID, request)
+	session, err := handler.service.CreateAcademicSession(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -56,13 +56,13 @@ func (handler *Handler) CreateAcademicSession(w http.ResponseWriter, r *http.Req
 }
 
 func (handler *Handler) ListAcademicSessions(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
-	academicSessions, err := handler.service.ListAcademicSession(r.Context(), claims.TenantID)
+	academicSessions, err := handler.service.ListAcademicSession(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return
@@ -74,13 +74,13 @@ func (handler *Handler) ListAcademicSessions(w http.ResponseWriter, r *http.Requ
 }
 
 func (handler *Handler) GetCurrentSession(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
-	currentAcademicSession, err := handler.service.GetCurrentAcademicSession(r.Context(), claims.TenantID)
+	currentAcademicSession, err := handler.service.GetCurrentAcademicSession(r.Context(), tenantId)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)

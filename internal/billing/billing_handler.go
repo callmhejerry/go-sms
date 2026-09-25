@@ -27,9 +27,9 @@ func NewBillingHandler(billingService *BillingService, logger *slog.Logger, vali
 }
 
 func (h *BillingHandler) CreateFeeType(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -47,7 +47,7 @@ func (h *BillingHandler) CreateFeeType(w http.ResponseWriter, r *http.Request) {
 
 	feeType, err := h.billingService.CreateFeeType(
 		r.Context(),
-		claims.TenantID,
+		tenantId,
 		request,
 	)
 
@@ -67,6 +67,11 @@ func (h *BillingHandler) CreateFeeStructure(w http.ResponseWriter, r *http.Reque
 		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
 		return
 	}
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
 
 	var request CreatFeeStructureRequest
 
@@ -80,7 +85,7 @@ func (h *BillingHandler) CreateFeeStructure(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	feeStructure, err := h.billingService.CreateFeeStructure(r.Context(), claims.TenantID, request)
+	feeStructure, err := h.billingService.CreateFeeStructure(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
@@ -94,13 +99,13 @@ func (h *BillingHandler) CreateFeeStructure(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *BillingHandler) ListFeeTypes(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	feeTypes, err := h.billingService.ListFeeTypes(r.Context(), claims.TenantID)
+	feeTypes, err := h.billingService.ListFeeTypes(r.Context(), tenantId)
 
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
@@ -112,9 +117,9 @@ func (h *BillingHandler) ListFeeTypes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) ListFeeStructures(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -128,12 +133,11 @@ func (h *BillingHandler) ListFeeStructures(w http.ResponseWriter, r *http.Reques
 	}
 
 	var feeStructures []store.FeeStructure
-	var err *apierror.AppError
 
 	if academicSessionId == nil {
-		feeStructures, err = h.billingService.ListFeeStructures(r.Context(), claims.TenantID)
+		feeStructures, err = h.billingService.ListFeeStructures(r.Context(), tenantId)
 	} else {
-		feeStructures, err = h.billingService.ListFeeStructuresByAdmissionId(r.Context(), claims.TenantID, *academicSessionId)
+		feeStructures, err = h.billingService.ListFeeStructuresByAdmissionId(r.Context(), tenantId, *academicSessionId)
 	}
 
 	if err != nil {
@@ -146,9 +150,9 @@ func (h *BillingHandler) ListFeeStructures(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *BillingHandler) AssignFeesToStudent(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -164,7 +168,7 @@ func (h *BillingHandler) AssignFeesToStudent(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	studentFees, err := h.billingService.AssignFeesToStudent(r.Context(), claims.TenantID, request)
+	studentFees, err := h.billingService.AssignFeesToStudent(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
@@ -178,9 +182,9 @@ func (h *BillingHandler) AssignFeesToStudent(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *BillingHandler) ListStudentFees(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -190,7 +194,7 @@ func (h *BillingHandler) ListStudentFees(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fees, err := h.billingService.ListStudentFees(r.Context(), claims.TenantID, studentID)
+	fees, err := h.billingService.ListStudentFees(r.Context(), tenantId, studentID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -207,6 +211,12 @@ func (h *BillingHandler) RecordPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
 	var request RecordPaymentRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -219,7 +229,7 @@ func (h *BillingHandler) RecordPayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payment, err := h.billingService.RecordPayments(
-		r.Context(), claims.TenantID, claims.UserID,
+		r.Context(), tenantId, claims.UserID,
 		request,
 	)
 	if err != nil {
@@ -233,9 +243,9 @@ func (h *BillingHandler) RecordPayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) ListStudentPayments(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -245,7 +255,7 @@ func (h *BillingHandler) ListStudentPayments(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	payments, err := h.billingService.ListStudentPayments(r.Context(), claims.TenantID, studentID)
+	payments, err := h.billingService.ListStudentPayments(r.Context(), tenantId, studentID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -256,9 +266,9 @@ func (h *BillingHandler) ListStudentPayments(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *BillingHandler) GetStudentFeeSummary(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -268,7 +278,7 @@ func (h *BillingHandler) GetStudentFeeSummary(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	summary, err := h.billingService.GetStudentFeeSummary(r.Context(), claims.TenantID, studentID)
+	summary, err := h.billingService.GetStudentFeeSummary(r.Context(), tenantId, studentID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -279,13 +289,13 @@ func (h *BillingHandler) GetStudentFeeSummary(w http.ResponseWriter, r *http.Req
 }
 
 func (h *BillingHandler) ListOutstandingFees(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	fees, err := h.billingService.ListOutstandingFees(r.Context(), claims.TenantID)
+	fees, err := h.billingService.ListOutstandingFees(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return

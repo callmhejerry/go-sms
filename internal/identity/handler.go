@@ -28,9 +28,9 @@ func NewHandler(service *Service, logger *slog.Logger, appValidator *validation.
 
 func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -46,7 +46,7 @@ func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handler.service.CreateUser(r.Context(), claims.TenantID, input)
+	user, err := handler.service.CreateUser(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return
@@ -58,10 +58,9 @@ func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -72,7 +71,7 @@ func (handler *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handler.service.GetUserByID(r.Context(), userId, claims.TenantID)
+	user, err := handler.service.GetUserByID(r.Context(), userId, tenantId)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)

@@ -26,9 +26,9 @@ func NewHandler(service *Service, logger *slog.Logger, validator *validation.App
 }
 
 func (handler *Handler) CreateAdmission(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (handler *Handler) CreateAdmission(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	admission, err := handler.service.CreateAdmission(r.Context(), claims.TenantID, request)
+	admission, err := handler.service.CreateAdmission(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -57,12 +57,12 @@ func (handler *Handler) CreateAdmission(w http.ResponseWriter, r *http.Request) 
 }
 
 func (handler *Handler) ListAdmissions(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
-	admissions, err := handler.service.ListAdmissions(r.Context(), claims.TenantID)
+	admissions, err := handler.service.ListAdmissions(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return
@@ -74,8 +74,10 @@ func (handler *Handler) ListAdmissions(w http.ResponseWriter, r *http.Request) {
 
 func (handler *Handler) AcceptAdmission(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -91,7 +93,7 @@ func (handler *Handler) AcceptAdmission(w http.ResponseWriter, r *http.Request) 
 
 	admission, student, err := handler.service.AcceptAdmission(
 		r.Context(),
-		claims.TenantID,
+		tenantId,
 		admissionId,
 		claims.UserID,
 		request.ClassArmId,

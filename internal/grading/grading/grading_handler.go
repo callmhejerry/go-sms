@@ -26,9 +26,9 @@ func NewGradingHandler(service *GradingService, logger *slog.Logger, appValidato
 }
 
 func (h *GradingHandler) CreateAssessmentType(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *GradingHandler) CreateAssessmentType(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	at, err := h.service.CreateAssessmentType(r.Context(), claims.TenantID, input)
+	at, err := h.service.CreateAssessmentType(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -55,13 +55,13 @@ func (h *GradingHandler) CreateAssessmentType(w http.ResponseWriter, r *http.Req
 }
 
 func (h *GradingHandler) ListAssessmentTypes(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	types, err := h.service.ListAssessmentTypes(r.Context(), claims.TenantID)
+	types, err := h.service.ListAssessmentTypes(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -72,9 +72,9 @@ func (h *GradingHandler) ListAssessmentTypes(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *GradingHandler) ComputeResults(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -89,7 +89,7 @@ func (h *GradingHandler) ComputeResults(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	count, err := h.service.ComputeResults(r.Context(), claims.TenantID, input)
+	count, err := h.service.ComputeResults(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -105,9 +105,9 @@ func (h *GradingHandler) ComputeResults(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *GradingHandler) GetStudentResults(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (h *GradingHandler) GetStudentResults(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	results, err := h.service.GetStudentResults(r.Context(), claims.TenantID, GetStudentResultRequest{
+	results, err := h.service.GetStudentResults(r.Context(), tenantId, GetStudentResultRequest{
 		StudentID:         studentID,
 		AcademicSessionID: sessionID,
 	})
@@ -138,9 +138,9 @@ func (h *GradingHandler) GetStudentResults(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *GradingHandler) GetStudentReportCard(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *GradingHandler) GetStudentReportCard(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response, err := h.service.GetStudentReportCard(r.Context(), claims.TenantID, studentID, sessionID)
+	response, err := h.service.GetStudentReportCard(r.Context(), tenantId, studentID, sessionID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return

@@ -22,3 +22,9 @@ UPDATE tenants
 SET status = $2, updated_at = NOW()
 WHERE id = $1
 RETURNING *; 
+
+-- name: HasUser :one
+SELECT EXISTS (
+    SELECT 1 FROM tenant_users
+    WHERE tenant_id = $1 AND user_id = $2
+) AS has_user;

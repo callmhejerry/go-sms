@@ -27,9 +27,9 @@ func NewHandler(service *Service, logger *slog.Logger, appValidator *validation.
 }
 
 func (handler *Handler) CreateStudent(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (handler *Handler) CreateStudent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	student, err := handler.service.CreateStudent(r.Context(), claims.TenantID, request)
+	student, err := handler.service.CreateStudent(r.Context(), tenantId, request)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -58,9 +58,9 @@ func (handler *Handler) CreateStudent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) GetStudent(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (handler *Handler) GetStudent(w http.ResponseWriter, r *http.Request) {
 		apierror.WriteError(w, apierror.Validation("Invalid student_id"), handler.logger)
 		return
 	}
-	student, err := handler.service.GetStudent(r.Context(), claims.TenantID, studentId)
+	student, err := handler.service.GetStudent(r.Context(), tenantId, studentId)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -81,9 +81,9 @@ func (handler *Handler) GetStudent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) ListStudentsPage(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (handler *Handler) ListStudentsPage(w http.ResponseWriter, r *http.Request)
 
 	students, err := handler.service.ListStudentsPage(
 		r.Context(),
-		claims.TenantID,
+		tenantId,
 		offsetRequest.Page,
 		offsetRequest.PageSize,
 	)
@@ -106,9 +106,9 @@ func (handler *Handler) ListStudentsPage(w http.ResponseWriter, r *http.Request)
 }
 
 func (handler *Handler) GetStudentParents(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (handler *Handler) GetStudentParents(w http.ResponseWriter, r *http.Request
 		apierror.WriteError(w, apierror.Validation("invalid student id"), handler.logger)
 		return
 	}
-	parents, err := handler.service.GetStudentParents(r.Context(), claims.TenantID, studentID)
+	parents, err := handler.service.GetStudentParents(r.Context(), tenantId, studentID)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -129,9 +129,9 @@ func (handler *Handler) GetStudentParents(w http.ResponseWriter, r *http.Request
 }
 
 func (handler *Handler) GetStudentProfile(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -141,7 +141,7 @@ func (handler *Handler) GetStudentProfile(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	studentProfile, err := handler.service.GetStudentProfile(r.Context(), claims.TenantID, studentID)
+	studentProfile, err := handler.service.GetStudentProfile(r.Context(), tenantId, studentID)
 
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
@@ -153,9 +153,9 @@ func (handler *Handler) GetStudentProfile(w http.ResponseWriter, r *http.Request
 }
 
 func (handler *Handler) SearchStudentsPage(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (handler *Handler) SearchStudentsPage(w http.ResponseWriter, r *http.Reques
 
 	students, err := handler.service.SearchStudentPage(
 		r.Context(),
-		claims.TenantID,
+		tenantId,
 		request,
 		offsetPagination.Page,
 		offsetPagination.PageSize,
@@ -181,9 +181,9 @@ func (handler *Handler) SearchStudentsPage(w http.ResponseWriter, r *http.Reques
 }
 
 func (handler *Handler) SearchStudentsCursor(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, handler.logger)
 		return
 	}
 
@@ -193,7 +193,7 @@ func (handler *Handler) SearchStudentsCursor(w http.ResponseWriter, r *http.Requ
 
 	students, err := handler.service.SearchStudentCursor(
 		r.Context(),
-		claims.TenantID,
+		tenantId,
 		request,
 		cursor.PageSize,
 		DecodeListStudentCursor(cursor.Next),
@@ -209,9 +209,9 @@ func (handler *Handler) SearchStudentsCursor(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *Handler) UpdateStudent(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -227,7 +227,7 @@ func (h *Handler) UpdateStudent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	student, err := h.service.UpdateStudent(r.Context(), claims.TenantID, studentID, input)
+	student, err := h.service.UpdateStudent(r.Context(), tenantId, studentID, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return

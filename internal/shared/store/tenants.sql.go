@@ -74,6 +74,25 @@ func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (Tenant, err
 	return i, err
 }
 
+const hasUser = `-- name: HasUser :one
+SELECT EXISTS (
+    SELECT 1 FROM tenant_users
+    WHERE tenant_id = $1 AND user_id = $2
+) AS has_user
+`
+
+type HasUserParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) HasUser(ctx context.Context, arg HasUserParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasUser, arg.TenantID, arg.UserID)
+	var has_user bool
+	err := row.Scan(&has_user)
+	return has_user, err
+}
+
 const listTenants = `-- name: ListTenants :many
 SELECT id, name, slug, status, created_at, updated_at FROM tenants
 ORDER BY created_at DESC

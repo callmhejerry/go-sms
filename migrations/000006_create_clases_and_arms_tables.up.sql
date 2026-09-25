@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS classes (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    UNIQUE(tenant_id, name)
+    CONSTRAINT classes_tenant_id_name_key UNIQUE(tenant_id, name)
 );
 
 CREATE INDEX idx_classes_tenant_id ON classes(tenant_id);
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS class_arms (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    UNIQUE(tenant_id, class_id, name)
+    CONSTRAINT class_arms_tenant_id_class_id_name_key UNIQUE(tenant_id, class_id, name)
 );
 
 

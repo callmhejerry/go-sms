@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS students (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    UNIQUE(tenant_id, admission_number)
+    CONSTRAINT students_tenant_id_admission_number_key UNIQUE(tenant_id, admission_number)
 );
 
 CREATE INDEX idx_students_tenant_id ON students(id);

@@ -25,9 +25,9 @@ func NewHandler(service *SubjectService, logger *slog.Logger, appValidator *vali
 }
 
 func (h *SubjectHandler) CreateSubject(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -42,7 +42,7 @@ func (h *SubjectHandler) CreateSubject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject, err := h.subjectService.CreateSubject(r.Context(), claims.TenantID, input)
+	subject, err := h.subjectService.CreateSubject(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -54,13 +54,13 @@ func (h *SubjectHandler) CreateSubject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SubjectHandler) ListSubjects(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	subjects, err := h.subjectService.ListSubjects(r.Context(), claims.TenantID)
+	subjects, err := h.subjectService.ListSubjects(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -71,9 +71,9 @@ func (h *SubjectHandler) ListSubjects(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SubjectHandler) AddSubjectToClass(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -89,7 +89,7 @@ func (h *SubjectHandler) AddSubjectToClass(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	cs, err := h.subjectService.AddSubjectToClass(r.Context(), claims.TenantID, input.ClassID, input.SubjectID)
+	cs, err := h.subjectService.AddSubjectToClass(r.Context(), tenantId, input.ClassID, input.SubjectID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -101,9 +101,9 @@ func (h *SubjectHandler) AddSubjectToClass(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *SubjectHandler) AssignTeacher(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -118,7 +118,7 @@ func (h *SubjectHandler) AssignTeacher(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	assignment, err := h.subjectService.AssignTeacherToSubject(r.Context(), claims.TenantID, input)
+	assignment, err := h.subjectService.AssignTeacherToSubject(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return

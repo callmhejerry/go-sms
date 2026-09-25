@@ -9,9 +9,8 @@ import (
 )
 
 type Claims struct {
-	UserID   uuid.UUID `json:"user_id"`
-	TenantID uuid.UUID `json:"tenant_id"`
-	Email    string    `json:"email"`
+	UserID uuid.UUID `json:"user_id"`
+	Email  string    `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -27,11 +26,10 @@ func NewJWTManager(secret string, expirationHours int) *JWTManager {
 	}
 }
 
-func (m *JWTManager) Generate(userID, tenantID uuid.UUID, email string) (string, error) {
+func (m *JWTManager) Generate(userID uuid.UUID, email string) (string, error) {
 	claims := Claims{
-		UserID:   userID,
-		TenantID: tenantID,
-		Email:    email,
+		UserID: userID,
+		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "school-sms",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

@@ -13,23 +13,21 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-    tenant_id, email, first_name, last_name, password_hash
+    email, first_name, last_name, password_hash
 )
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, tenant_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at
+VALUES ($1, $2, $3, $4)
+RETURNING id, email, password_hash, first_name, last_name, is_active, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	TenantID     uuid.UUID `json:"tenant_id"`
-	Email        string    `json:"email"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	PasswordHash string    `json:"password_hash"`
+	Email        string `json:"email"`
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
+	PasswordHash string `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.TenantID,
 		arg.Email,
 		arg.FirstName,
 		arg.LastName,
@@ -38,7 +36,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
 		&i.Email,
 		&i.PasswordHash,
 		&i.FirstName,
@@ -51,21 +48,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, tenant_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at FROM users
-WHERE email = $1 AND tenant_id = $2
+SELECT id, email, password_hash, first_name, last_name, is_active, created_at, updated_at FROM users
+WHERE email = $1
 `
 
-type GetUserByEmailParams struct {
-	Email    string    `json:"email"`
-	TenantID uuid.UUID `json:"tenant_id"`
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, arg.Email, arg.TenantID)
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
 		&i.Email,
 		&i.PasswordHash,
 		&i.FirstName,
@@ -78,21 +69,15 @@ func (q *Queries) GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) 
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, tenant_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at FROM users
-WHERE id = $1 AND tenant_id = $2
+SELECT id, email, password_hash, first_name, last_name, is_active, created_at, updated_at FROM users
+WHERE id = $1
 `
 
-type GetUserByIDParams struct {
-	ID       uuid.UUID `json:"id"`
-	TenantID uuid.UUID `json:"tenant_id"`
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, arg GetUserByIDParams) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByID, arg.ID, arg.TenantID)
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.TenantID,
 		&i.Email,
 		&i.PasswordHash,
 		&i.FirstName,
@@ -105,9 +90,10 @@ func (q *Queries) GetUserByID(ctx context.Context, arg GetUserByIDParams) (User,
 }
 
 const listUsersByTenant = `-- name: ListUsersByTenant :many
-SELECT id, tenant_id, email, password_hash, first_name, last_name, is_active, created_at, updated_at FROM users
-WHERE tenant_id = $1
-ORDER BY created_at DESC
+SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.is_active, u.created_at, u.updated_at FROM users u
+INNER JOIN tenant_users tu ON tu.user_id = u.id
+WHERE tu.tenant_id = $1
+ORDER BY u.created_at DESC
 `
 
 func (q *Queries) ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error) {
@@ -121,7 +107,6 @@ func (q *Queries) ListUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]
 		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.TenantID,
 			&i.Email,
 			&i.PasswordHash,
 			&i.FirstName,

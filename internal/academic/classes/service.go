@@ -26,7 +26,7 @@ func NewService(queries *store.Queries, pool *pgxpool.Pool) *Service {
 	}
 }
 
-func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, request CreateClassRequest) (*store.Class, error) {
+func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, request CreateClassRequest) (*store.Class, *apierror.AppError) {
 	name := strings.TrimSpace(strings.ToLower(request.Name))
 
 	if name == "" {
@@ -44,7 +44,7 @@ func (service *Service) CreateClass(ctx context.Context, tenantId uuid.UUID, req
 	return &class, nil
 }
 
-func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid.UUID) (*store.Class, error) {
+func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid.UUID) (*store.Class, *apierror.AppError) {
 	class, err := service.queries.GetClassByID(ctx, store.GetClassByIDParams{
 		ID:       classId,
 		TenantID: tenantId,
@@ -59,7 +59,7 @@ func (service *Service) GetClassById(ctx context.Context, tenantId, classId uuid
 	return &class, nil
 }
 
-func (service *Service) ListClasses(ctx context.Context, tenantId uuid.UUID) ([]store.Class, error) {
+func (service *Service) ListClasses(ctx context.Context, tenantId uuid.UUID) ([]store.Class, *apierror.AppError) {
 	classes, err := service.queries.ListClasses(ctx, tenantId)
 
 	if err != nil {
@@ -68,7 +68,7 @@ func (service *Service) ListClasses(ctx context.Context, tenantId uuid.UUID) ([]
 	return classes, nil
 }
 
-func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, request CreateClassArmRequest) (*store.ClassArm, error) {
+func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, request CreateClassArmRequest) (*store.ClassArm, *apierror.AppError) {
 	name := strings.TrimSpace(strings.ToLower(request.Name))
 
 	if name == "" {
@@ -96,7 +96,7 @@ func (service *Service) CreateClassArm(ctx context.Context, tenantId uuid.UUID, 
 	return &classArm, nil
 }
 
-func (service *Service) ListClassArms(ctx context.Context, tenantId uuid.UUID, classId uuid.UUID) ([]store.ClassArm, error) {
+func (service *Service) ListClassArms(ctx context.Context, tenantId uuid.UUID, classId uuid.UUID) ([]store.ClassArm, *apierror.AppError) {
 	classArms, err := service.queries.ListClassArms(ctx, store.ListClassArmsParams{
 		TenantID: tenantId,
 		ClassID:  classId,

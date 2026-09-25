@@ -26,9 +26,9 @@ func NewHandler(service *InventoryService, logger *slog.Logger, appValidator *va
 }
 
 func (h *InventoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -42,7 +42,7 @@ func (h *InventoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	cat, err := h.service.CreateInventoryCategory(r.Context(), claims.TenantID, input)
+	cat, err := h.service.CreateInventoryCategory(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -54,13 +54,13 @@ func (h *InventoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request
 }
 
 func (h *InventoryHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	cats, err := h.service.ListInventoryCategories(r.Context(), claims.TenantID)
+	cats, err := h.service.ListInventoryCategories(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -71,9 +71,9 @@ func (h *InventoryHandler) ListCategories(w http.ResponseWriter, r *http.Request
 }
 
 func (h *InventoryHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *InventoryHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := h.service.CreateInventoryItem(r.Context(), claims.TenantID, input)
+	item, err := h.service.CreateInventoryItem(r.Context(), tenantId, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -100,13 +100,13 @@ func (h *InventoryHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *InventoryHandler) ListItems(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	items, err := h.service.ListInventoryItems(r.Context(), claims.TenantID)
+	items, err := h.service.ListInventoryItems(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -123,6 +123,12 @@ func (h *InventoryHandler) RecordStockMovement(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
 	var input RecordStockMovementRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		apierror.WriteError(w, apierror.Validation("invalid request body"), h.logger)
@@ -134,7 +140,7 @@ func (h *InventoryHandler) RecordStockMovement(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	movement, err := h.service.RecordStockMovement(r.Context(), claims.TenantID, claims.UserID, input)
+	movement, err := h.service.RecordStockMovement(r.Context(), tenantId, claims.UserID, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -146,9 +152,9 @@ func (h *InventoryHandler) RecordStockMovement(w http.ResponseWriter, r *http.Re
 }
 
 func (h *InventoryHandler) ListItemMovements(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -158,7 +164,7 @@ func (h *InventoryHandler) ListItemMovements(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	movements, err := h.service.ListItemMovements(r.Context(), claims.TenantID, itemID)
+	movements, err := h.service.ListItemMovements(r.Context(), tenantId, itemID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -175,13 +181,19 @@ func (h *InventoryHandler) CreateIssuance(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
+		return
+	}
+
 	var input CreateIssuanceRequest
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		apierror.WriteError(w, apierror.Validation("invalid request body"), h.logger)
 		return
 	}
 
-	issuance, err := h.service.CreateInventoryIssuance(r.Context(), claims.TenantID, claims.UserID, input)
+	issuance, err := h.service.CreateInventoryIssuance(r.Context(), tenantId, claims.UserID, input)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -193,9 +205,9 @@ func (h *InventoryHandler) CreateIssuance(w http.ResponseWriter, r *http.Request
 }
 
 func (h *InventoryHandler) ListItemIssuances(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
@@ -205,7 +217,7 @@ func (h *InventoryHandler) ListItemIssuances(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	issuances, err := h.service.ListInventoryIssuance(r.Context(), claims.TenantID, itemID)
+	issuances, err := h.service.ListInventoryIssuance(r.Context(), tenantId, itemID)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return
@@ -216,13 +228,13 @@ func (h *InventoryHandler) ListItemIssuances(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *InventoryHandler) ListLowStockItems(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetClaims(r.Context())
-	if claims == nil {
-		apierror.WriteError(w, apierror.ErrUnauthorized, h.logger)
+	tenantId, found, err := middleware.GetTenantId(r.Context())
+	if !found {
+		apierror.WriteError(w, err, h.logger)
 		return
 	}
 
-	items, err := h.service.ListLowStockItems(r.Context(), claims.TenantID)
+	items, err := h.service.ListLowStockItems(r.Context(), tenantId)
 	if err != nil {
 		apierror.WriteError(w, err, h.logger)
 		return

@@ -5,11 +5,10 @@ import (
 	"strings"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
-	"github.com/callmhejerry/sms/internal/shared/database"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func TranslateAcademicError(err error) error {
+func TranslateAcademicError(err error) *apierror.AppError {
 	if err == nil {
 		return nil
 	}
@@ -29,5 +28,5 @@ func TranslateAcademicError(err error) error {
 	}
 
 	// Fall back to generic translation
-	return database.TranslateError(err)
+	return apierror.ErrInternal
 }

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    UNIQUE (tenant_id, name)
+    CONSTRAINT roles_tenant_id_name_key UNIQUE (tenant_id, name)
 );
 
 CREATE INDEX idx_roles_tenant_id  ON roles(tenant_id);
