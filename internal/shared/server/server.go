@@ -138,15 +138,13 @@ func New(
 	// Inventory Categories
 	protectedMux.HandleFunc("POST /api/v1/inventory/categories", handlers.Inventory.CreateCategory)
 	protectedMux.HandleFunc("GET /api/v1/inventory/categories", handlers.Inventory.ListCategories)
-
 	// Inventory Items
 	protectedMux.HandleFunc("POST /api/v1/inventory/items", handlers.Inventory.CreateItem)
 	protectedMux.HandleFunc("GET /api/v1/inventory/items", handlers.Inventory.ListItems)
-
+	protectedMux.HandleFunc("GET /api/v1/inventory/low-stock", handlers.Inventory.ListLowStockItems)
 	// Stock Movements
 	protectedMux.HandleFunc("POST /api/v1/inventory/movements", handlers.Inventory.RecordStockMovement)
 	protectedMux.HandleFunc("GET /api/v1/inventory/items/{item_id}/movements", handlers.Inventory.ListItemMovements)
-
 	// Inventory Issuances
 	protectedMux.HandleFunc("POST /api/v1/inventory/issuances", handlers.Inventory.CreateIssuance)
 	protectedMux.HandleFunc("GET /api/v1/inventory/items/{item_id}/issuances", handlers.Inventory.ListItemIssuances)
@@ -157,7 +155,11 @@ func New(
 
 	var handler http.Handler = mux
 
+	rateLimiter := middleware.NewRateLimiter(5, 20)
+
 	handler = middleware.RequestID(handler)
+	handler = middleware.SecurityHeader(handler)
+	handler = rateLimiter.Middleware(handler)
 	handler = middleware.Recovery(logger)(handler)
 
 	httpServer := &http.Server{
