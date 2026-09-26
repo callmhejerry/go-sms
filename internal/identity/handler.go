@@ -28,12 +28,6 @@ func NewHandler(service *Service, logger *slog.Logger, appValidator *validation.
 
 func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
-	tenantId, found, err := middleware.GetTenantId(r.Context())
-	if !found {
-		apierror.WriteError(w, err, handler.logger)
-		return
-	}
-
 	var input CreateUserRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -46,7 +40,7 @@ func (handler *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := handler.service.CreateUser(r.Context(), tenantId, input)
+	user, err := handler.service.CreateUser(r.Context(), input)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return

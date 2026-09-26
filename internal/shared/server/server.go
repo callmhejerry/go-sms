@@ -63,6 +63,7 @@ func New(
 
 	mux.HandleFunc("POST /api/v1/tenants", handlers.Tenant.CreateTenant)
 	mux.HandleFunc("POST /api/v1/login", handlers.Identity.Login)
+	mux.Handle("POST /api/v1/users", http.HandlerFunc(handlers.Identity.CreateUser))
 
 	// --------------------------
 	// Protected routes
@@ -75,8 +76,6 @@ func New(
 	protectedMux.HandleFunc("GET /api/v1/tenants/{id}", handlers.Tenant.GetTenant)
 
 	// IDENTITY ROUTE
-
-	protectedMux.Handle("POST /api/v1/users", adminOnly(http.HandlerFunc(handlers.Identity.CreateUser)))
 	protectedMux.HandleFunc("GET /api/v1/tenants/{tenant_id}/users/{id}", handlers.Identity.GetUser)
 
 	// ACADEMIC ROUTE
@@ -162,6 +161,7 @@ func New(
 
 	rateLimiter := middleware.NewRateLimiter(5, 20)
 
+	handler = middleware.CORS(&cfg, handler)
 	handler = middleware.RequestID(handler)
 	handler = middleware.SecurityHeader(handler)
 	handler = rateLimiter.Middleware(handler)

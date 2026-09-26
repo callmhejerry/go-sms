@@ -4,10 +4,10 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -39,11 +39,11 @@ func HashPassword(password string) (string, error) {
 	return encoded, nil
 }
 
-func CheckPassword(password, encodedHash string) (bool, error) {
+func CheckPassword(password, encodedHash string) (bool, *apierror.AppError) {
 	parts := strings.Split(encodedHash, "$")
 
 	if len(parts) != 5 {
-		return false, errors.New("Invalid hash format")
+		return false, apierror.Internal(nil, "Invalid hash format")
 	}
 
 	var memory, time uint32
@@ -56,13 +56,13 @@ func CheckPassword(password, encodedHash string) (bool, error) {
 	// parts[4] = hash
 
 	if _, err := fmt.Sscanf(parts[2], "m=%d,t=%d,p=%d", &memory, &time, &threads); err != nil {
-		return false, err
+		return false, apierror.Internal(err, "Something went wrong")
 	}
 
 	salt, err := base64.RawStdEncoding.DecodeString(parts[3])
 
 	if err != nil {
-		return false, err
+		return false, apierror.Internal(err, "Something went wrong")
 	}
 
 	decodedhash, err := base64.RawStdEncoding.DecodeString(parts[4])

@@ -67,10 +67,11 @@ func main() {
 	subjectRepository := subjects.NewSubjectRepositoryImpl(queries)
 	gradingRepository := grading.NewGradingRespositoryImpl(queries)
 	inventoryRepository := inventory.NewRepositoryImpl(queries, pool)
+	identityRepository := identity.NewRepositoryImpl(queries)
 
 	// Services
 	tenantService := tenant.NewService(pool, queries)
-	identityService := identity.NewService(queries, jwtManager)
+	identityService := identity.NewService(queries, jwtManager, identityRepository)
 	academicSessionService := academicsession.NewService(queries, pool)
 	studentService := student.NewService(queries, pool)
 	classService := classes.NewService(queries, pool)

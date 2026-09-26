@@ -2,7 +2,6 @@ package identity
 
 import (
 	"context"
-	"net/http"
 	"slices"
 	"strings"
 
@@ -14,23 +13,24 @@ import (
 )
 
 type Service struct {
-	queries    *store.Queries
-	jwtManager *auth.JWTManager
+	queries      *store.Queries
+	jwtManager   *auth.JWTManager
+	identityRepo IdentityRepository
 }
 
-func NewService(queries *store.Queries, jwtManager *auth.JWTManager) *Service {
+func NewService(
+	queries *store.Queries,
+	jwtManager *auth.JWTManager,
+	identityRepo IdentityRepository,
+) *Service {
 	return &Service{
-		queries:    queries,
-		jwtManager: jwtManager,
+		queries:      queries,
+		jwtManager:   jwtManager,
+		identityRepo: identityRepo,
 	}
 }
 
-var (
-	InvalidCredentials = apierror.New("invalid_credentials", "Invalid email or password", http.StatusUnauthorized, nil, nil)
-	InactiveUser       = apierror.New("user_inactive", "Invalid email or password", http.StatusUnauthorized, nil, nil)
-)
-
-func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, input CreateUserRequest) (*store.User, error) {
+func (service *Service) CreateUser(ctx context.Context, input CreateUserRequest) (*store.User, error) {
 	email := strings.TrimSpace(input.Email)
 	firstName := strings.TrimSpace(input.FirstName)
 	lastName := strings.TrimSpace(input.LastName)
@@ -57,17 +57,14 @@ func (service *Service) CreateUser(ctx context.Context, tenantId uuid.UUID, inpu
 		return nil, apierror.Internal(err, "failed to hash password")
 	}
 
-	newUser, err := service.queries.CreateUser(ctx, store.CreateUserParams{
-		Email:        input.Email,
-		FirstName:    firstName,
-		LastName:     lastName,
-		PasswordHash: hash,
-	})
+	newUser, err := service.identityRepo.CreateNewUser(
+		ctx, firstName, lastName, email, hash,
+	)
 
 	if err != nil {
-		return nil, apierror.Internal(err, "Failed to create new user")
+		return nil, err
 	}
-	return &newUser, nil
+	return newUser, nil
 }
 
 func (service *Service) GetUserByID(ctx context.Context, id uuid.UUID, tenant_id uuid.UUID) (*store.User, error) {
@@ -86,6 +83,7 @@ func ConvertToUserResponse(user *store.User) UserResponse {
 		LastName:  user.LastName,
 		CreatedAt: user.CreatedAt.Time.String(),
 		IsActive:  user.IsActive,
+		Email:     user.Email,
 	}
 }
 
@@ -96,36 +94,36 @@ func (service *Service) Login(ctx context.Context, request LoginRequest) (*Login
 		return nil, apierror.Validation("email is required")
 	}
 
-	user, err := service.queries.GetUserByEmail(ctx, email)
+	user, err := service.identityRepo.GetUserByEmail(ctx, email)
 
 	if err != nil {
-		return nil, InvalidCredentials
+		return nil, ErrInvalidCredentials
 	}
 
 	valid, err := auth.CheckPassword(request.Password, user.PasswordHash)
 	if err != nil || !valid {
-		return nil, InvalidCredentials
+		return nil, ErrInvalidCredentials
 	}
 
 	if !user.IsActive {
-		return nil, InactiveUser
+		return nil, ErrInactiveUser
 	}
 
-	userId, err := uuid.Parse(user.ID.String())
+	userId, parseErr := uuid.Parse(user.ID.String())
 
-	if err != nil {
+	if parseErr != nil {
 		return nil, apierror.Internal(err, "Failed to parse user_id")
 	}
 
-	token, err := service.jwtManager.Generate(userId, email)
+	token, jwtErr := service.jwtManager.Generate(userId, email)
 
-	if err != nil {
+	if jwtErr != nil {
 		return nil, apierror.Internal(err, "Failed to generate token")
 	}
 
 	return &LoginResponse{
 		Token: token,
-		User:  ConvertToUserResponse(&user),
+		User:  ConvertToUserResponse(user),
 	}, nil
 }
 

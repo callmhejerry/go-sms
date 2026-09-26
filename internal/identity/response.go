@@ -1,12 +1,13 @@
 package identity
 
 type UserResponse struct {
-	ID        string `json:"id"`
-	TenantID  string `json:"tenant_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	CreatedAt string `json:"created_at"`
-	IsActive  bool   `json:"is_active"`
+	ID        string   `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Email     string   `json:"email"`
+	CreatedAt string   `json:"created_at"`
+	IsActive  bool     `json:"is_active"`
+	Roles     []string `json:"roles"`
 }
 
 type LoginResponse struct {
