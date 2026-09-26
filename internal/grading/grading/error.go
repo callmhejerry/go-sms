@@ -39,7 +39,7 @@ func translateAssessmentTypeError(err error) *apierror.AppError {
 		return ErrAssessmentTypeNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.CheckViolation:
@@ -66,7 +66,7 @@ func translateScoresTypeError(err error) *apierror.AppError {
 		return ErrScoreNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.CheckViolation:

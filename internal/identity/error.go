@@ -21,18 +21,23 @@ func translateUserError(err error) *apierror.AppError {
 	if err == nil {
 		return nil
 	}
+
+	// Expected database/domain errors.
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrUserNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.UniqueViolation:
-			if pgErr.ColumnName == "email" {
+			switch pgErr.ConstraintName {
+			case "users_email_key":
 				return ErrUserWithEmailAlreadyExist
 			}
 		}
 	}
+
+	// Unexpected infrastructure error.
 	return apierror.Internal(err, "Something went wrong")
 }

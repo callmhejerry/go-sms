@@ -41,7 +41,7 @@ func translateInventoryCategoryError(err error) *apierror.AppError {
 		return ErrInventoryCategoryNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
@@ -63,7 +63,7 @@ func translateInventoryItemError(err error) *apierror.AppError {
 		return ErrInventoryItemNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
@@ -99,7 +99,7 @@ func translateStockMovementError(err error) *apierror.AppError {
 		return ErrStockMovementNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
@@ -127,7 +127,7 @@ func translateInventoryIssuanceError(err error) *apierror.AppError {
 		return ErrInventoryIssuanceNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.ForeignKeyViolation:

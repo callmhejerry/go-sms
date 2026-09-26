@@ -31,7 +31,7 @@ func translateSubjectError(err error) *apierror.AppError {
 		return ErrSubjectNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.UniqueViolation:

@@ -52,7 +52,7 @@ func translateFeeTypeError(err error) *apierror.AppError {
 		return ErrFeeTypeNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
@@ -73,7 +73,7 @@ func translateFeeStructuresError(err error) *apierror.AppError {
 		return ErrFeeStructuresNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.UniqueViolation:
@@ -104,7 +104,7 @@ func translateStudentFeesError(err error) *apierror.AppError {
 		return ErrStudentFeeNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, *&pgErr) {
 		switch pgErr.Code {
 		case apierror.ForeignKeyViolation:
@@ -130,7 +130,7 @@ func translatePaymentsError(err error) *apierror.AppError {
 		return ErrPaymentNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.CheckViolation:
@@ -156,7 +156,7 @@ func translatePaymentAllocationError(err error) *apierror.AppError {
 		return ErrPaymentAllocationNotFound
 	}
 
-	var pgErr pgconn.PgError
+	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case apierror.CheckViolation:
