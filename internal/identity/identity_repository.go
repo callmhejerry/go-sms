@@ -2,10 +2,14 @@ package identity
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type IdentityRepository interface {
@@ -16,6 +20,10 @@ type IdentityRepository interface {
 
 	GetUserById(ctx context.Context, userId uuid.UUID) (*store.User, *apierror.AppError)
 	GetUserByEmail(ctx context.Context, email string) (*store.User, *apierror.AppError)
+	CreateRefreshToken(ctx context.Context, userId uuid.UUID, refreshTokenHash string, expiresAt time.Duration) *apierror.AppError
+	GetRefreshToken(ctx context.Context, refreshTokenHash string) (*store.RefreshToken, *apierror.AppError)
+	RevokeRefreshToken(ctx context.Context, id uuid.UUID) *apierror.AppError
+	DeleteRefreshToken(ctx context.Context, id uuid.UUID) *apierror.AppError
 }
 
 type identityRepositoryImpl struct {
@@ -71,4 +79,68 @@ func (repo *identityRepositoryImpl) GetUserByEmail(
 	}
 
 	return &user, nil
+}
+
+func (repo *identityRepositoryImpl) CreateRefreshToken(
+	ctx context.Context,
+	userId uuid.UUID,
+	refreshTokenHash string,
+	expiresAt time.Duration,
+) *apierror.AppError {
+	_, err := repo.queries.CreateRefreshToken(
+		ctx, store.CreateRefreshTokenParams{
+			RefreshTokenHash: refreshTokenHash,
+			UserID:           userId,
+			ExpiresAt: pgtype.Timestamptz{
+				Time:  time.Now().Add(expiresAt),
+				Valid: true,
+			},
+		},
+	)
+	if err != nil {
+		return apierror.Internal(err, "Something went wrong")
+	}
+	return nil
+}
+
+func (repo *identityRepositoryImpl) RevokeRefreshToken(
+	ctx context.Context,
+	id uuid.UUID,
+) *apierror.AppError {
+	err := repo.queries.RevokeRefreshToken(ctx, id)
+	if err != nil {
+		return apierror.Internal(err, "Something went wrong")
+	}
+	return nil
+}
+
+func (repo *identityRepositoryImpl) GetRefreshToken(
+	ctx context.Context,
+	refreshTokenHash string,
+) (*store.RefreshToken, *apierror.AppError) {
+	refreshToken, err := repo.queries.GetRefreshToken(ctx, refreshTokenHash)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierror.NotFound("Refresh token not found")
+		}
+		return nil, apierror.Internal(err, "something went wrong")
+	}
+
+	return &refreshToken, nil
+}
+
+func (repo *identityRepositoryImpl) DeleteRefreshToken(
+	ctx context.Context,
+	id uuid.UUID,
+) *apierror.AppError {
+	err := repo.queries.DeleteRefreshToken(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return apierror.Internal(err, "something went wrong")
+	}
+
+	return nil
 }

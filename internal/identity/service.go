@@ -2,15 +2,24 @@ package identity
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
 	"github.com/callmhejerry/sms/internal/shared/auth"
 	"github.com/callmhejerry/sms/internal/shared/constants"
 	"github.com/callmhejerry/sms/internal/shared/store"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
+
+const REFRESH_TOKEN_EXPIRATION_TIME = 30 * (24 * time.Hour) //30 days
 
 type Service struct {
 	queries      *store.Queries
@@ -115,15 +124,23 @@ func (service *Service) Login(ctx context.Context, request LoginRequest) (*Login
 		return nil, apierror.Internal(err, "Failed to parse user_id")
 	}
 
-	token, jwtErr := service.jwtManager.Generate(userId, email)
+	accessToken, jwtErr := service.jwtManager.Generate(userId, email)
 
 	if jwtErr != nil {
 		return nil, apierror.Internal(err, "Failed to generate token")
 	}
 
+	refreshToken, err := service.GenerateRefreshToken(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LoginResponse{
-		Token: token,
-		User:  ConvertToUserResponse(user),
+		RefreshTokenResponse: RefreshTokenResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		},
+		User: ConvertToUserResponse(user),
 	}, nil
 }
 
@@ -181,4 +198,77 @@ func (service *Service) UserHasRole(ctx context.Context, userId uuid.UUID, roleN
 	return false, nil
 }
 
+func (service *Service) Logout(ctx context.Context, refreshTokenStr string) *apierror.AppError {
+	refreshTokenHash := sha256.Sum256([]byte(refreshTokenStr))
+	refreshToken, err := service.identityRepo.GetRefreshToken(
+		ctx, string(refreshTokenHash[:]),
+	)
+	if err != nil {
+		if err.HTTPStatus == http.StatusNotFound {
+			return apierror.ErrUnauthorized
+		}
+		return err
+	}
+
+	return service.identityRepo.DeleteRefreshToken(ctx, refreshToken.ID)
+}
+
+func (service *Service) RefreshToken(
+	ctx context.Context,
+	refreshTokenStr string,
+) (*RefreshTokenResponse, *apierror.AppError) {
+	refreshTokenHash := sha256.Sum256([]byte(refreshTokenStr))
+	refreshToken, err := service.identityRepo.GetRefreshToken(ctx, string(refreshTokenHash[:]))
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apierror.ErrUnauthorized
+		}
+		return nil, err
+	}
+	expiresAt := refreshToken.ExpiresAt.Time
+	revokedAt := refreshToken.RevokedAt.Valid
+
+	if time.Now().After(expiresAt) || revokedAt {
+		return nil, apierror.ErrUnauthorized
+	}
+	user, err := service.identityRepo.GetUserById(ctx, refreshToken.UserID)
+
+	if err != nil {
+		return nil, err
+	}
+	accessToken, jwtErr := service.jwtManager.Generate(user.ID, user.Email)
+
+	if jwtErr != nil {
+		return nil, apierror.Internal(jwtErr, "failed to generate token")
+	}
+
+	newRefreshToken, err := service.GenerateRefreshToken(ctx, user.ID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+	}, nil
+}
+
 // func (service *Service) GetUser(ctx context.Context)
+
+func (service *Service) GenerateRefreshToken(
+	ctx context.Context,
+	userId uuid.UUID,
+) (string, *apierror.AppError) {
+	randomBytes := make([]byte, 32)
+	rand.Read(randomBytes)
+
+	refreshTokenHash := sha256.Sum256(randomBytes)
+	refreshToken := hex.EncodeToString(randomBytes)
+
+	if err := service.identityRepo.CreateRefreshToken(ctx, userId, string(refreshTokenHash[:]), REFRESH_TOKEN_EXPIRATION_TIME); err != nil {
+		return "", err
+	}
+	return refreshToken, nil
+}

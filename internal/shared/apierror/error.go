@@ -46,10 +46,10 @@ func Wrap(err error, code, message string, status int, details any) *AppError {
 }
 
 const (
-	CheckViolation      = "check_violation"
-	UniqueViolation     = "unique_violation"
-	ForeignKeyViolation = "foreign_key_violation"
-	NotNullViolation    = "not_null_violation"
+	CheckViolation      = "23514"
+	UniqueViolation     = "23505"
+	ForeignKeyViolation = "23503"
+	NotNullViolation    = "23502"
 )
 
 var (
