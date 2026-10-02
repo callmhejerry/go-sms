@@ -64,6 +64,8 @@ func New(
 	mux.HandleFunc("POST /api/v1/tenants", handlers.Tenant.CreateTenant)
 	mux.HandleFunc("POST /api/v1/login", handlers.Identity.Login)
 	mux.Handle("POST /api/v1/users", http.HandlerFunc(handlers.Identity.CreateUser))
+	mux.Handle("POST /api/v1/logout", http.HandlerFunc(handlers.Identity.Logout))
+	mux.Handle("POST /api/v1/refresh-token", http.HandlerFunc(handlers.Identity.RefreshToken))
 
 	// --------------------------
 	// Protected routes

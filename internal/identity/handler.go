@@ -99,3 +99,38 @@ func (handler *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(loginResult)
 }
+
+func (handler *Handler) Logout(rw http.ResponseWriter, r *http.Request) {
+	var request LogoutRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		apierror.WriteError(rw, apierror.Validation("Invalid request body"), handler.logger)
+		return
+	}
+
+	err := handler.service.Logout(r.Context(), request.RefreshToken)
+	if err != nil {
+		apierror.WriteError(rw, err, handler.logger)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusNoContent)
+}
+
+func (handler *Handler) RefreshToken(rw http.ResponseWriter, r *http.Request) {
+	var request RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(*&request); err != nil {
+		apierror.WriteError(rw, apierror.Validation("Invalid request body"), handler.logger)
+		return
+	}
+
+	tokens, err := handler.service.RefreshToken(r.Context(), request.RefreshToken)
+	if err != nil {
+		apierror.WriteError(rw, err, handler.logger)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(rw).Encode(tokens)
+}
