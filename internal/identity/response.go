@@ -11,8 +11,8 @@ type UserResponse struct {
 }
 
 type LoginResponse struct {
-	RefreshTokenResponse
-	User UserResponse `json:"user"`
+	Tokens RefreshTokenResponse `json:"tokens"`
+	User   UserResponse         `json:"user"`
 }
 
 type RefreshTokenResponse struct {

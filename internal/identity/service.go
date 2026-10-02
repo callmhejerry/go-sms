@@ -136,7 +136,7 @@ func (service *Service) Login(ctx context.Context, request LoginRequest) (*Login
 	}
 
 	return &LoginResponse{
-		RefreshTokenResponse: RefreshTokenResponse{
+		Tokens: RefreshTokenResponse{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		},
