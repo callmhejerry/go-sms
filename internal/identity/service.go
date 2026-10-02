@@ -249,6 +249,10 @@ func (service *Service) RefreshToken(
 		return nil, err
 	}
 
+	if err := service.identityRepo.DeleteRefreshToken(ctx, refreshToken.ID); err != nil {
+		return nil, err
+	}
+
 	return &RefreshTokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
