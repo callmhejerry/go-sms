@@ -55,7 +55,18 @@ func (handler *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) ListTenants(w http.ResponseWriter, r *http.Request) {
-	tenants, err := handler.service.ListTenants(r.Context())
+	var userId *uuid.UUID
+
+	if r.URL.Query().Has("user_id") {
+		parsedUserId, err := uuid.Parse(r.URL.Query().Get("user_id"))
+		if err != nil {
+			apierror.WriteError(w, apierror.Validation("invalid user id"), handler.logger)
+			return
+		}
+		userId = &parsedUserId
+	}
+
+	tenants, err := handler.service.ListTenants(r.Context(), userId)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return

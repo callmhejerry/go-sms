@@ -268,10 +268,11 @@ func (service *Service) GenerateRefreshToken(
 	randomBytes := make([]byte, 32)
 	rand.Read(randomBytes)
 
-	refreshTokenHash := sha256.Sum256(randomBytes)
 	refreshToken := hex.EncodeToString(randomBytes)
+	refreshTokenHashBytes := sha256.Sum256([]byte(refreshToken))
+	refreshTokenHash := hex.EncodeToString(refreshTokenHashBytes[:])
 
-	if err := service.identityRepo.CreateRefreshToken(ctx, userId, string(refreshTokenHash[:]), REFRESH_TOKEN_EXPIRATION_TIME); err != nil {
+	if err := service.identityRepo.CreateRefreshToken(ctx, userId, refreshTokenHash, REFRESH_TOKEN_EXPIRATION_TIME); err != nil {
 		return "", err
 	}
 	return refreshToken, nil

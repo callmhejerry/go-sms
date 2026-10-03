@@ -28,3 +28,9 @@ SELECT EXISTS (
     SELECT 1 FROM tenant_users
     WHERE tenant_id = $1 AND user_id = $2
 ) AS has_user;
+
+-- name: GetTenantsByUserId :many
+SELECT t.* FROM tenants t
+JOIN tenant_users tu ON tu.tenant_id = t.id
+WHERE tu.user_id = $1
+ORDER BY t.name;

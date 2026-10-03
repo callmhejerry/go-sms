@@ -74,6 +74,40 @@ func (q *Queries) GetTenantBySlug(ctx context.Context, slug string) (Tenant, err
 	return i, err
 }
 
+const getTenantsByUserId = `-- name: GetTenantsByUserId :many
+SELECT t.id, t.name, t.slug, t.status, t.created_at, t.updated_at FROM tenants t
+JOIN tenant_users tu ON tu.tenant_id = t.id
+WHERE tu.user_id = $1
+ORDER BY t.name
+`
+
+func (q *Queries) GetTenantsByUserId(ctx context.Context, userID uuid.UUID) ([]Tenant, error) {
+	rows, err := q.db.Query(ctx, getTenantsByUserId, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tenant{}
+	for rows.Next() {
+		var i Tenant
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const hasUser = `-- name: HasUser :one
 SELECT EXISTS (
     SELECT 1 FROM tenant_users

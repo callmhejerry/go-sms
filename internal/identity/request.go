@@ -8,9 +8,8 @@ type CreateUserRequest struct {
 }
 
 type LoginRequest struct {
-	TenantSlug string `json:"tenant_slug" validate:"required"`
-	Email      string `json:"email" validate:"required,email"`
-	Password   string `json:"password" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
 type CreateRoleRequest struct {
