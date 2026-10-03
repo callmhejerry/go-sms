@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/callmhejerry/sms/internal/shared/apierror"
+	"github.com/callmhejerry/sms/internal/shared/middleware"
 	"github.com/callmhejerry/sms/internal/shared/validation"
 	"github.com/google/uuid"
 )
@@ -55,18 +56,13 @@ func (handler *Handler) CreateTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *Handler) ListTenants(w http.ResponseWriter, r *http.Request) {
-	var userId *uuid.UUID
-
-	if r.URL.Query().Has("user_id") {
-		parsedUserId, err := uuid.Parse(r.URL.Query().Get("user_id"))
-		if err != nil {
-			apierror.WriteError(w, apierror.Validation("invalid user id"), handler.logger)
-			return
-		}
-		userId = &parsedUserId
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		apierror.WriteError(w, apierror.ErrUnauthorized, handler.logger)
+		return
 	}
 
-	tenants, err := handler.service.ListTenants(r.Context(), userId)
+	tenants, err := handler.service.ListTenants(r.Context(), claims.UserID)
 	if err != nil {
 		apierror.WriteError(w, err, handler.logger)
 		return
