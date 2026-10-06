@@ -217,8 +217,9 @@ func (service *Service) RefreshToken(
 	ctx context.Context,
 	refreshTokenStr string,
 ) (*RefreshTokenResponse, *apierror.AppError) {
-	refreshTokenHash := sha256.Sum256([]byte(refreshTokenStr))
-	refreshToken, err := service.identityRepo.GetRefreshToken(ctx, string(refreshTokenHash[:]))
+	refreshTokenHashBytes := sha256.Sum256([]byte(refreshTokenStr))
+	refreshTokenHash := hex.EncodeToString(refreshTokenHashBytes[:])
+	refreshToken, err := service.identityRepo.GetRefreshToken(ctx, refreshTokenHash)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -240,7 +241,7 @@ func (service *Service) RefreshToken(
 	accessToken, jwtErr := service.jwtManager.Generate(user.ID, user.Email)
 
 	if jwtErr != nil {
-		return nil, apierror.Internal(jwtErr, "failed to generate token")
+		return nil, apierror.Internal(jwtErr, "Failed to generate access token")
 	}
 
 	newRefreshToken, err := service.GenerateRefreshToken(ctx, user.ID)
@@ -266,7 +267,9 @@ func (service *Service) GenerateRefreshToken(
 	userId uuid.UUID,
 ) (string, *apierror.AppError) {
 	randomBytes := make([]byte, 32)
-	rand.Read(randomBytes)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", apierror.Internal(err, "Failed to generate refresh token")
+	}
 
 	refreshToken := hex.EncodeToString(randomBytes)
 	refreshTokenHashBytes := sha256.Sum256([]byte(refreshToken))

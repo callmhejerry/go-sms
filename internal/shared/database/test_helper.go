@@ -66,7 +66,8 @@ func cleanup(t *testing.T, pool *pgxpool.Pool) {
 			user_roles,
 			roles,
 			users,
-			tenants
+			tenants,
+			refresh_tokens
 		RESTART IDENTITY CASCADE;
 	`)
 	if err != nil {
